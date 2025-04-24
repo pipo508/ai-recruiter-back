@@ -1,0 +1,541 @@
+Top 10 documentos más similares al prompt:
+
+1. Lucas_Rios.txt: similitud=0.6984
+Contenido:
+**1. Información Personal**
+
+Nombre: Lucas Rios
+Edad: 25 años
+Dirección: Doctor Maradona 1658, San Rafael, Mendoza, Argentina
+
+**2. Perfil Profesional**
+
+Analista en Sistemas y Programador de Software con experiencia en programación web y diseño gráfico.  Busco un puesto que me permita desarrollar mis habilidades y contribuir al logro de los objetivos de la organización.
+
+**3. Experiencia Laboral**
+
+* **Diseñador y Programador Autónomo (Enero 2017 - Enero 2020):**
+    * Encargado de diseños personalizados en banners y tarjetas de trabajo.
+    * Elaboración de presupuestos y análisis de costes.
+    * Planificación de recursos empresariales.
+    * Análisis de proyectos.
+    * Mejora de procesos.
+* **Estación de Servicio Shell (Diciembre 2017 - Febrero 2018):**
+    * Atención al público.
+
+**4. Formación Académica**
+
+* **Estudio Secundario:** Margarita Cinca de Geary N° 4-057 (2014)
+* **Estudio Terciario:** IES de Informática N° 9-012. Título en Analista en Sistemas y Programador de Software (en curso).
+* **Título en Gestión contable, impositiva y previsional, Perito Mercantil.**
+
+**5. Certificaciones**
+
+* Beca Egg "Programador Full Stack de Mendoza"
+
+**6. Idiomas**
+
+No se especifica en el texto original.
+
+**7. Habilidades Técnicas**
+
+* Java (Nivel Intermedio)
+* Programación web (Nivel Intermedio)
+* Diseño gráfico (banners y tarjetas)
+* HTML5
+* CSS3
+* JavaScript
+* AJAX
+* PHP
+* MySQL
+* Unity (Introducción a videojuegos 2D)
+* Ionic 6+ (Aplicaciones Android y PWAs con Angular)
+
+
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+2. Facundo_Avila.txt: similitud=0.6952
+Contenido:
+**1. Información Personal**
+
+* Nombre completo: Facundo Avila
+* Fecha de nacimiento: 27/01/1994
+* CUIL: 20-37963814-8
+
+**2. Perfil Profesional**
+
+Soy una persona responsable, proactiva, creativa y con muchas ganas de trabajar en lo que me gusta.  Soy bastante social y me gusta trabajar en equipo. Siempre dispuesta a escuchar y aprender cada día más.
+
+**3. Experiencia Laboral**
+
+* **Trabajos Freelance:**
+    * Desarrollo de sistemas de software a medida.  Ejemplos incluyen:
+        * Sistema de secretariado para médicos (finalizado y entregado).  Este sistema permite el almacenamiento de datos de pacientes, creación de turnos, evaluaciones diarias e historial clínico.  Incluye un front-end simplificado con navegación intuitiva y un sistema de búsqueda de pacientes.  [Enlaces a imágenes de ejemplo: https://drive.google.com/file/d/1UkvVVdV7T58apKWln2VxGt6R8F4jm70_/view?usp=sharing, https://drive.google.com/file/d/1VKjIEWJoNJtUu5tB2TPspWRIEd40B3wy/view?usp=sharing]
+        * Sistema de contabilidad y ventas para mercados (en fase alpha).  Permite la creación de ventas, gestión de productos (precio, foto, stock), contabilidad de caja automatizada y gestión de productos.
+        * Sistema de control para gimnasios (en fase alpha).  Sistema de registro de clientes, control de pagos, gestión de entrenamientos, rutinas con ejercicios (GIFs o enlaces a videos de YouTube) y rockola.  Utiliza roles y Spring Security.
+    * Reparaciones de placas, cambios de componentes y actualizaciones de hardware y software.
+
+* **Atención al público:**  Diversos comercios.
+
+* **Servicios Condor:** Atención al cliente en encomiendas (Chevallier) y mantenimiento de colectivos.
+
+* **Quioscos (2):** Atención al público y reposición de productos.
+
+* **Taller Mecánico con tienda de repuestos:** Atención al cliente y envíos.
+
+
+**4. Formación Académica**
+
+* **Curso de armado y reparación de PC:**  Mantenimiento de hardware y software. Egg Education (sede Mendoza).  Certificado (Marzo 2021 - Diciembre 2021).
+* **Programación Java Full Stack Jr.:** Adquisición de conocimientos sobre programación orientada a objetos en Java (POO), JPA, SQL, Spring Boot, HTML, Thymeleaf, Bootstrap, CSS y GitHub.
+
+**5. Certificaciones**
+
+* Certificación IMDEM (Febrero 2015 - Julio 2015)
+
+**6. Idiomas**
+
+* Inglés: Nivel Intermedio
+
+**7. Habilidades Técnicas**
+
+* **Habilidades Blandas:** Proactivo, responsable, trabajo en equipo, pensamiento crítico, actitud positiva, solución de problemas, capacidad de recibir y dar feedback, creatividad.
+* **Habilidades Duras:** Microsoft Excel, Word, Publisher, PowerPoint, MySQL, NetBeans, Visual Studio, Adobe Photoshop, GitHub, Workbench, Spring Boot, Bootstrap, Java 8. Conocimientos de administración de empresas y contabilidad.
+
+**8. Referencias**
+
+No se proporcionan referencias en el texto original.
+
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+3. Juan_Pablo_Manzano.txt: similitud=0.6840
+Contenido:
+**1. Información Personal**
+
+Juan Pablo Manzano
+
+**2. Perfil Profesional**
+
+Persona analítica y lógica, con gran determinación y adaptabilidad para abordar y resolver problemas en distintos ámbitos.  Leal y con principios firmes. Busca una empresa que le permita aplicar sus conocimientos y habilidades, ofreciendo oportunidades de crecimiento personal e intelectual.
+
+**3. Experiencia Laboral**
+
+* **AUTOSUR S.R.L.**
+    * **Encargado de Pagos / Administrativo** (2021 - actualidad)
+        * Pago a proveedores, operaciones bancarias, manejo de caja.
+        * Facturación, presentación de impuestos.
+    * **Administrativo Contable** (2016 - 2021)
+        * Facturación, control de stock, presentación de impuestos.
+    * **Repositor** (2015 - 2016)
+
+
+**4. Formación Académica**
+
+* **Universidad Tecnológica Nacional, Regional San Rafael**
+    * Ingeniería Industrial (Estudiante avanzado)  2015 - actualidad. Promedio: 8,76. Materias aprobadas: 40/44.
+* **E.N.E.T. Ejército de los Andes N.º 4-117**
+    * Técnico Electromecánico. 2014. Promedio: 8,96.
+
+
+**5. Certificaciones**
+
+* No se especifican certificaciones formales.  La información proporcionada corresponde a cursos online:
+
+**6. Formación Complementaria**
+
+* SQL: Creación de bases de datos – Udemy (Enero 2022)
+* Python 3: Visualización de datos – Udemy (Diciembre 2021)
+* Python 3: De 0 a experto – Udemy (Noviembre 2021)
+* HTML 5 + CSS – YouTube (Agosto 2021)
+* Fundamentos Inventor, diseño paramétrico – Udemy (Julio 2021)
+
+
+**7. Idiomas**
+
+* Español (Nativo)
+* Inglés (Hablado y escrito: Básico)
+
+**8. Habilidades Técnicas**
+
+* Microsoft Office (Nivel Medio/Avanzado)
+* Autodesk Inventor (Nivel Medio)
+* Autodesk AutoCAD (Nivel Medio)
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+4. Esteban_Ariel_Rivas_Vizcaino.txt: similitud=0.6764
+Contenido:
+**1. Información Personal**
+
+Nombre: Esteban Ariel Rivas Vizcaino
+LinkedIn: linkedin.com/in/estebanarivasv
+GitHub: https://github.com/estebanarivasv
+
+**2. Perfil Profesional**
+
+Desarrollador de software comprometido con la entrega de productos de calidad dentro de los plazos establecidos.  Facilita el aprendizaje de tecnologías a sus compañeros de trabajo y les brinda apoyo cuando es necesario.
+
+**3. Experiencia Laboral**
+
+* **Sistema de Gestión Contable (Septiembre 2021):**  Desarrollo de un sistema de gestión contable utilizando Excel y Visual Basic.  El sistema permite la interacción con datos de productos, precios, clientes, proveedores, ventas, empleados y vendedores.  Este proyecto representó la primera oportunidad de cumplir con los requisitos de un cliente.
+
+
+**4. Formación Académica**
+
+* **Ingeniería en Informática (2018-2022):** Universidad de Mendoza, Sede San Rafael, Mendoza.  Actualmente cursando 5to año (156/188 créditos).  Informática y Ciencias de la Información.
+
+
+**5. Certificaciones**
+
+* **Cambridge Assessment English - First Certificate in English - B2 (2018):** Credential ID: 0060256698
+* **Trinity College London - CEFR Level B2.2 - Level 1 Certificate in ESOL International (2016):** Credential ID: 1-596390396:1-596386559
+
+
+**6. Idiomas**
+
+* Español (Nativo)
+* Inglés (Avanzado)
+* Alemán (Básico)
+
+
+**7. Habilidades Técnicas**
+
+* **Programación:** APIs REST, Bases de Datos Relacionales, Flask, Angular (8+), Spring Boot, Docker, Node.js, Express.js
+* **Metodologías:** SCRUM
+* **Herramientas de Colaboración:** Jira, Trello, Git Kraken, GitFlow
+* **Principios y Patrones de Diseño:** SOLID, Patrones de Diseño (Comando, Observador)
+* **Programación Paralela:** Sockets, Locks, Forks, Subprocesos, Señales, Colas, Semáforos, Multiprocesamiento, Multihilos.
+* **Inteligencia Artificial:** Agentes, Lógica Difusa, Aprendizaje Bayesiano, Heurísticas, Algoritmos Genéticos, Procesamiento del Lenguaje Natural, Árboles de Decisión, Redes Neuronales.  (Librerías: skfuzzy, matplotlib, sklearn, itertools, numpy, nltk, pandas, wordcloud)
+
+
+**8. Portafolio de Desarrollo**
+
+* **SeismologyFlask (Abril 2020 - 8 meses):** API REST con Flask y cliente web.  (GitHub)
+    * REST API: Flask, Flask-RESTFUL, Flask-SQLAlchemy, Flask Mail, Flask JWT, SQLite
+    * Cliente: Jinja2, Twitter Bootstrap, Flask-WTF, Flask-Login
+* **SeismologyAngular (Agosto 2020 - 4 meses):** API REST y Cliente Web con Flask/Angular. (GitHub)
+    * REST API: Flask, Flask-RESTFUL, Flask-SQLAlchemy, Flask Mail, Flask JWT, MySQL
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+5. Gonzalo_Facundo_Martinez.txt: similitud=0.6692
+Contenido:
+**1. Información Personal**
+
+Nombre: Gonzalo Facundo Martinez
+Fecha de nacimiento: 05/11/1997
+
+**2. Perfil Profesional**
+
+Estudiante avanzado de Ingeniería Industrial.  Objetivo profesional: formar parte de un equipo de trabajo donde pueda aplicar sus conocimientos y desarrollarse personal y profesionalmente, cumpliendo con las políticas y necesidades de la organización.  Puesto 13 en cuadro de honor. Promedio actual: 8,67.
+
+**3. Experiencia Laboral**
+
+* Prácticas profesionales (200 horas): Plastiandino S.A. (2021)
+
+**4. Formación Académica**
+
+* Universidad Tecnológica Nacional – Facultad Regional San Rafael (2022): Ingeniería Industrial (Cursado finalizado, pendiente proyecto final).
+* Escuela Técnica N° 4-117 “Ejército de los Andes”: Técnico en Equipos e Instalaciones Electromecánicas (2016). Promedio general: 9,51.
+
+**5. Certificaciones**
+
+* Data Analytics: Nivel intermedio (11,5 hs.) - Power BI y SQL (ECA Capacitaciones, 2022).
+* Programación en Python: Nivel avanzado orientado a Data Science (500 hs.) - UTN Facultad Regional San Rafael (2021).
+* Introducción a la Programación en Python (500 hs.) - UTN Facultad Regional San Rafael (2020).
+* Introducción al desarrollo de videojuegos en Unity (12 hs.) - UTN Facultad Regional San Rafael (2019).
+* Capacitación en Operaciones Petroleras (108 hs.) - Escuela Técnica N° 4-117 “Ejército de los Andes”, San Rafael, Mendoza (2018).
+* Automatización por PLC - Escuela Técnica N° 4-117 “Ejército de los Andes”, San Rafael, Mendoza (2016).
+* Curso de inglés completado - Saint Patrick Institute (2015).
+
+**6. Idiomas**
+
+* Español (Nativo)
+* Inglés (Nivel B2)
+
+**7. Habilidades Técnicas**
+
+* Microsoft Office (Avanzado)
+* Power BI
+* MySQL
+* SketchUp
+* AutoCAD
+* Wolfram Mathematica
+* Google Drive, Meet, Classroom
+* Zoom
+* Programación en Python
+
+**8. Congresos**
+
+* V LIDERA - Competencias Empresariales (San Rafael, Mendoza, 17-19/05/2019).
+* Décimo Congreso Nacional de Estudiantes de Ingeniería Civil (San Rafael, Mendoza, 10-13/10/2017) - Participación como asistente.
+
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+6. Jonathan_Damián_Zelaya.txt: similitud=0.6673
+Contenido:
+**Información Personal**
+
+* Nombre completo: Jonathan Damián Zelaya
+* DNI: 42.220.887
+* Fecha de nacimiento: 10/01/2000
+* Edad: 22 años
+* Domicilio: República del Líbano 1553, San Rafael, Mendoza
+
+**Formación Académica**
+
+* **Estudios Terciarios:** Tecnicatura Superior en Desarrollo de Software – IES 9-012 San Rafael en Informática (2019 - actualidad)
+* **Estudios Secundarios:** Técnico en Equipos e Instalaciones Electromecánicas – Escuela 4-117 Ejército de los Andes (2013-2018)
+
+**Habilidades Técnicas**
+
+* Manejo de herramientas de informática.
+* Manejo de Microsoft Office.
+* Manejo de bases de datos.
+* Lenguaje SQL.
+* Manipulación de archivos en la nube.
+* Conocimiento de sistemas operativos.
+* Conocimiento de hardware.
+* Diseño de páginas web.
+
+**Idiomas**
+
+* Inglés: nivel intermedio
+
+**Información de Contacto**
+
+* Teléfono: +54 260 4391822
+* Correo electrónico: jonathandzelaya@gmail.com
+
+**Otros Datos de Interés**
+
+* Licencia de conducir categoría B1
+
+**Perfil Profesional**
+
+Me considero una persona predispuesta a adaptarme a las necesidades de la empresa y desempeñar correctamente las tareas asignadas a mi puesto.  Soy proactivo, confiable, responsable, con compromiso y capacidad de trabajar en equipo y aprender de diferentes puntos de vista.  Utilizo correo electrónico y redes sociales.
+--------------------------------------------------------------------------------
+
+7. Jesús_Emanuel_Verdini.txt: similitud=0.6664
+Contenido:
+**1. Información Personal**
+
+Nombre: Jesús Emanuel Verdini
+Edad: 22 años
+
+**2. Perfil Profesional**
+
+Estudiante avanzado de Ingeniería Informática con sólida formación en desarrollo de software y pasión por la tecnología.  Posee experiencia en gestión de proyectos y desarrollo full-stack, combinando habilidades técnicas con liderazgo y gestión.  Practicante dedicado de calistenia y gimnasio, lo que ha fortalecido su disciplina y capacidad de superación personal.
+
+**3. Experiencia Laboral**
+
+* **Administrador de Propiedades (2022 - Presente)**
+    * Gestión de tres propiedades para alquiler temporal.
+    * Implementación de sistema de gestión en Excel.
+    * Coordinación entre propietarios e inquilinos.
+* **Ayudante en Instalaciones (1 año de experiencia)**
+    * Asistente de plomería, gasista y albañilería.
+    * Mantenimiento general.
+
+
+**4. Formación Académica**
+
+* **Universidad de Mendoza (Actual - 4to año):** Ingeniería Informática, con especialización en desarrollo de software e IA.
+* **Escuela Manuel Ignacio Molina (2018-2020):** Bachiller en Contabilidad.
+* **Escuela Ejército de los Andes (2016-2018):**  (No se especifica el título obtenido)
+
+
+**5. Habilidades Técnicas**
+
+* **Lenguajes de programación:** Python, Java, JavaScript (React, Angular)
+* **Frameworks:** Django, Flask, Spring Boot
+* **Bases de datos:** MySQL, PostgreSQL
+* **Herramientas:** Git, GitHub, Maven, APIs REST, Linux
+* **Áreas de especialización:** Desarrollo web full-stack, Inteligencia Artificial, Desarrollo de APIs REST.
+
+
+**6. Proyectos Destacados**
+
+* **Sistema de Gestión de Gimnasio:** Desarrollo full-stack de aplicación web con sistema de pagos y gestión de membresías, utilizando una base de datos relacional optimizada (Python, Flask, PostgreSQL, React).
+* **Plataforma de Venta de Cervezas:** Desarrollo de API REST con sistema de gestión de inventario e interfaz responsive moderna (Java, Spring Boot, MySQL, Angular).
+
+
+**7. Idiomas**
+
+* Español: Nativo
+* Inglés: Básico
+
+
+**8. Actividades**
+
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+8. Néstor_Alfredo_Fuenzalida_Troyano.txt: similitud=0.6637
+Contenido:
+**1. Información Personal**
+
+Néstor Alfredo Fuenzalida Troyano
+
+**2. Perfil Profesional**
+
+Ingeniero Industrial y Desarrollador Web Full Stack con experiencia en la mejora de procesos de producción y desarrollo de soluciones tecnológicas para satisfacer las necesidades del cliente.  Apasionado por la optimización de la eficiencia y la calidad en la producción de bienes y servicios.
+
+**3. Experiencia Laboral**
+
+* **YANCANELO (Pasante):**
+    * Diseño de layout de almacenamiento de insumos y productos terminados.
+    * Estimación de volúmenes y diseño de almacenes.
+    * Estudio de recupero de la inversión de las posibles alternativas.
+
+**4. Formación Académica**
+
+* **Universidad Tecnológica Nacional, Facultad Regional San Rafael:** Ingeniero Industrial (Marzo 2002 - Marzo 2021)
+* **ENET N°4-117 Ejército de los Andes:** Técnico Mecánico Electricista (Marzo 1996 - Diciembre 2001)
+* **Egg Cooperation:** Programador Web Full Stack (Graduación: Diciembre 2021, 476 horas de cursado en 24 semanas)
+
+**5. Certificaciones**
+
+* Montador Electricista CCT N°6-206
+* Soldadura básica CCT N°6-039
+* Licencia de conducir B-1: Autos y camionetas
+
+**6. Idiomas**
+
+No se especifica en el texto original.
+
+**7. Habilidades Técnicas**
+
+* **Manejo de Software:**
+    * Autodesk AutoCAD (Intermedio)
+    * Autodesk Inventor (Intermedio)
+    * Paquete Office (Intermedio)
+    * Google Sketchup (Intermedio)
+    * NetBeans IDE 8.2 (Principiante)
+    * MySQL 8.0 (Principiante)
+    * Visual Studio Code 1.62 (Principiante)
+* **Desarrollo Web:**
+    * Backend (Trainee): Java/MySQL/Git-GitHub
+    * Frontend (Trainee): HTML5/CSS/Bootstrap/Spring Frameworks/Thymeleaf
+* **Otras Habilidades:** Conocimientos básicos de electricidad industrial, conocimientos de Arduino, capacidad de toma de decisiones, capacidad de liderazgo, adaptabilidad para trabajar en grupos, iniciativa para el trabajo independiente, autodidacta, orientado al aprendizaje cooperativo, orientado a la comunicación.
+
+
+**8. Referencias**
+
+No se proporcionan en el texto original.
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+9. Matías_Gabriel_Cozzo.txt: similitud=0.6626
+Contenido:
+**1. Información Personal**
+
+* Fecha de nacimiento: 03/04/1995
+* Nacionalidad: Argentina
+* Estado civil: Concubinato
+* CUIL: 20-38909414-6
+* Domicilio: Fleming 161, San Rafael
+
+**2. Perfil Profesional**
+
+Me considero una persona responsable, dinámica y creativa, con facilidad de adaptación y capacidad de trabajar en equipo, en condiciones de alta presión, con iniciativa para resolver problemas eficazmente y lograr las metas y objetivos trazados por la empresa.
+
+**3. Experiencia Laboral**
+
+* **Universidad Nacional de Cuyo** (03/2016 - 03/2017): Tutor. Tutorías cátedra Química Inorgánica.
+* **Travel Rock** (03/2014 - 03/2016): Vendedor. Ventas de viajes de egresados.
+
+**4. Formación Académica**
+
+* **Ingeniería Industrial:** Universidad Tecnológica Nacional (03/2019 - En curso). Actualmente cursando las últimas dos materias.
+* **Ingeniería Química:** Universidad Nacional de Cuyo (03/2015 - 11/2018). Cursada hasta el cuarto año.
+
+**5. Certificaciones y Cursos**
+
+* Curso de Desarrollador Java (02/2022 - actualidad)
+* Curso Excel Intermedio (Empleotecnia, 03/2022)
+* Formación en Lean Manufacturing (04/2021 - 02/2022)
+* Formación en Administración de Personal (04/2021 - 11/2021)
+* Auditor Interno y Requisitos Normativos Integrados de Gestión aplicados a normas ISO 19011/2018; 9001/2015 e ISO 22000/2018 (10/2020 - 11/2020)
+* Capacitación de Primeros Auxilios
+* Capacitaciones para la Inserción Laboral
+* Participación del programa Proyecto Joven - Pampa Energía
+
+
+**6. Idiomas**
+
+* Español: Nativo
+* Inglés: Intermedio
+
+**7. Habilidades Técnicas**
+
+* Microsoft Excel: Intermedio
+* Microsoft Word: Intermedio
+* PowerPoint: Intermedio
+* Power BI: Intermedio
+* AutoCAD: Básico
+
+**8. Referencias**
+
+No se proporcionan referencias en el texto original.
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
+10. Pablo_Fernando_Martínez.txt: similitud=0.6621
+Contenido:
+**1. Información Personal**
+
+Pablo Fernando Martínez
+
+**2. Perfil Profesional**
+
+Profesional con amplia experiencia en administración, supervisión, ventas y contabilidad, con sólidas habilidades en gestión de personal y trabajo en equipo.  Demostrando capacidad para adaptarse a diferentes entornos laborales y asumir responsabilidades en puestos de alta exigencia.  Predisposición al aprendizaje continuo y al crecimiento profesional.
+
+**3. Experiencia Laboral**
+
+* **MORA S.A.C.I.F.** (07/1990 - 07/1995): Ejecutivo de Compras y Ejecutivo Contable.  Responsabilidades: Conciliación de cuentas contables y bancarias, Libro Diario, Caja, Pagos a Proveedores.
+* **Covisan S.A. y Suter S.A.** (08/1995 - 09/2003): Supervisor - Operador y Ejecutivo de Ventas. Responsabilidades: Seguimiento de cuentas corrientes, facturación, seguimiento de ingresos de cobranzas, análisis y seguimiento de ventas, liquidación de comisiones y pago a representantes a nivel nacional, supervisión de ventas en las zonas de Entre Ríos, Corrientes, Misiones, Córdoba, Chaco y Formosa.
+* **Ciber Word Games** (09/2003 - 2013): Administrador, Supervisor y Encargado General.
+* **El Garage Ropa Deportiva** (09/2013 - 2021): Administrador, Supervisor y Encargado General. Responsabilidades: Instalación de computadoras y redes, reparación y configuración, manejo y supervisión del personal a cargo, administración contable e impositiva, supervisión de ventas.
+
+
+**4. Formación Académica**
+
+* 3er año de Ciencias Económicas - Universidad Nacional de Cuyo.
+* 2do año de Análisis de Sistemas - Universidad Nacional de Salta.
+* Agente de Propaganda Médica - Instituto Universitario de Ciencias de la Salud.
+* Técnico Electricista - Escuela Técnica Reynaldo Merín (CCT 6-206).
+
+
+**5. Certificaciones**
+
+* Desarrollador de Programación.
+
+
+**6. Idiomas**
+
+No especificado en el texto original.
+
+
+**7. Habilidades Técnicas**
+
+* Manejo de personal.
+* Trabajo en equipo.
+* Trabajo independiente.
+* Gestión bajo presión.
+* Seguimiento de instrucciones.
+* Contabilidad.
+* Administración.
+* Ventas.
+* Instalación y reparación de computadoras y redes.
+* Programación (PSeInt, Java, JPA, JDBC, MySQL, HTML, Git, Spring Boot, Python).
+
+
+**8. Referencias**
+
+[... Contenido truncado]
+--------------------------------------------------------------------------------
+
