@@ -1,0 +1,20 @@
+@startuml Racing System's Sequence Diagram
+actor User #MediumVioletRed
+participant UserController #lightblue
+participant UserService #blueviolet
+participant SecurityService #lightblue
+participant UserRepository #LimeGreen
+database DB #GreenYellow
+User-> UserController: Authentication Request
+UserController -> UserController: Data Validation 
+UserController -> User: Asking for action
+User -> UserController: Inscription Request
+UserController -> UserService: Asking for avilable places
+UserService --> UserController : Aviable Places
+UserController -> UserService: Reservation request
+UserService --> UserController : Reserved
+UserController -> User: Reservation confirmed
+UserController -> UserService: Persistance Request
+UserService -> UserRepository: Persist reservation data in DB
+UserRepository -> DB: Save Reservation Data
+@enduml

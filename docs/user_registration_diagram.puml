@@ -1,0 +1,20 @@
+@startuml Racing System's Sequence Diagram
+actor User #MediumVioletRed
+participant UserController #lightblue
+participant UserService #blueviolet
+participant SecurityService #lightblue
+participant UserRepository #LimeGreen
+database DB #GreenYellow
+User-> UserController: Sign Up Request
+UserController --> UserController: Data Validation 
+UserController -> UserService: Sent Data
+UserService -> SecurityService : Sent Password
+SecurityService -> SecurityService : Password Encryption
+SecurityService -> UserService : Encrypted Password
+UserService -> UserRepository: Save User Data
+UserRepository -> DB: Persist User Data
+DB --> UserRepository: Persisted User Data
+UserRepository --> UserService: Persisted User Data
+UserService --> UserController: Persisted User Data
+UserController --> User: Succes Response
+@enduml

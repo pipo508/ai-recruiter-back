@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Procesamiento de Archivos PDF</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .success {
+      color: green;
+      margin-top: 15px;
+    }
+    .error {
+      color: red;
+      margin-top: 15px;
+    }
+    .warning {
+      color: orange;
+      margin-top: 15px;
+    }
+    .needs-vision {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 4px;
+    }
+    .vision-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn-vision {
+      background-color: #28a745;
+    }
+    .btn-vision:hover {
+      background-color: #218838;
+    }
+    .btn-skip {
+      background-color: #6c757d;
+    }
+    .btn-skip:hover {
+      background-color: #5a6268;
+    }
+    .processing {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Procesamiento de Archivos PDF</h1>
+
+  <form id="uploadForm">
+    <div class="form-group">
+      <label for="userId">ID de Usuario:</label>
+      <input
+        type="text"
+        id="userId"
+        name="user_id"
+        placeholder="Ingrese su ID de usuario"
+        required
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="pdfFiles">Seleccionar PDFs:</label>
+      <input
+        type="file"
+        id="pdfFiles"
+        name="files[]"
+        multiple
+        accept=".pdf"
+        required
+      />
+    </div>
+
+    <button type="submit">Procesar PDFs</button>
+  </form>
+
+  <div id="result" style="display: none;">
+    <h2>Resultado del procesamiento:</h2>
+    <div id="successList" class="success"></div>
+    <div id="duplicateList" class="error"></div>
+    <div id="failedList" class="error"></div>
+  </div>
+
+  <!-- Nueva sección para documentos que requieren Vision -->
+  <div id="needsVisionSection" class="needs-vision" style="display: none;">
+    <h3>⚠️ Documentos que requieren procesamiento con Vision</h3>
+    <p>Los siguientes documentos no pudieron ser procesados con el método estándar y requieren el uso de Vision AI para extraer su texto. Este proceso utiliza API de OpenAI y puede generar costos adicionales.</p>
+    <div id="needsVisionList"></div>
+  </div>
+
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", async function (
+      event
+    ) {
+      event.preventDefault();
+
+      const userId = document.getElementById("userId").value;
+      const files = document.getElementById("pdfFiles").files;
+
+      if (!userId || files.length === 0) {
+        alert("Por favor complete todos los campos requeridos.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("user_id", userId);
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files[]", files[i]);
+      }
+
+      try {
+        const response = await fetch("/document/process-pdfs", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Error ${response.status}: ${response.statusText}\n${errorText}`
+          );
+        }
+
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error("La respuesta del servidor no es JSON válido.");
+        }
+
+        const resultDiv = document.getElementById("result");
+        const successList = document.getElementById("successList");
+        const duplicateList = document.getElementById("duplicateList");
+        const failedList = document.getElementById("failedList");
+        const needsVisionSection = document.getElementById("needsVisionSection");
+        const needsVisionList = document.getElementById("needsVisionList");
+
+        successList.innerHTML = "";
+        duplicateList.innerHTML = "";
+        failedList.innerHTML = "";
+        needsVisionList.innerHTML = "";
+
+        if (result.processed && result.processed.length > 0) {
+          successList.innerHTML =
+            `<strong>✅ Procesados (${result.processed.length}):</strong><ul>` +
+            result.processed
+              .map(
+                (doc) =>
+                  `Archivo "<em>${doc.filename}</em>" cargado correctamente (${doc.char_count} caracteres).`
+              )
+              .map((line) => `<li>${line}</li>`)
+              .join("") +
+            "</ul>";
+        }
+
+        if (result.duplicates && result.duplicates.length > 0) {
+          duplicateList.innerHTML =
+            `<strong>⚠️ Archivos duplicados (${result.duplicates.length}):</strong><ul>` +
+            result.duplicates
+              .map(
+                (doc) =>
+                  `El archivo "<em>${doc.filename}</em>" ya fue cargado previamente como "<em>${doc.existing_document.filename}</em>".`
+              )
+              .map((line) => `<li>${line}</li>`)
+              .join("") +
+            "</ul>";
+        }
+
+        if (result.failed && result.failed.length > 0) {
+          failedList.innerHTML =
+            `<strong>❌ Fallidos (${result.failed.length}):</strong><ul>` +
+            result.failed
+              .map(
+                (doc) =>
+                  `El archivo "<em>${doc.filename}</em>" no pudo procesarse. Motivo: ${doc.reason}.`
+              )
+              .map((line) => `<li>${line}</li>`)
+              .join("") +
+            "</ul>";
+        }
+
+        // Mostrar documentos que necesitan Vision
+        if (result.needs_vision && result.needs_vision.length > 0) {
+          const visionItemsHtml = result.needs_vision.map(doc => {
+            return `
+              <div class="vision-item" data-filename="${doc.filename}" data-temp-path-id="${doc.temp_path_id}">
+                <p>El archivo "<em>${doc.filename}</em>" requiere procesamiento con Vision. Motivo: ${doc.reason}</p>
+                <div class="vision-actions">
+                  <button class="btn-vision" onclick="processWithVision('${doc.temp_path_id}')">
+                    Procesar con Vision
+                  </button>
+                  <button class="btn-skip" onclick="skipVisionProcessing('${doc.temp_path_id}')">
+                    Omitir
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          needsVisionList.innerHTML = visionItemsHtml;
+          needsVisionSection.style.display = "block";
+        } else {
+          needsVisionSection.style.display = "none";
+        }
+
+        resultDiv.style.display = "block";
+      } catch (error) {
+        alert("Error al procesar los archivos:\n" + error.message);
+        console.error("Error:", error);
+      }
+    });
+
+    // Función para procesar un documento con Vision
+    async function processWithVision(tempPathId) {
+      const userId = document.getElementById("userId").value;
+      if (!userId) {
+        alert("Se requiere ID de usuario para procesar con Vision");
+        return;
+      }
+
+      try {
+        // Obtener el elemento del botón y agregar un spinner
+        const visionItem = document.querySelector(`.vision-item[data-temp-path-id="${tempPathId}"]`);
+        const visionButton = visionItem.querySelector('.btn-vision');
+        const originalButtonText = visionButton.innerHTML;
+        
+        // Agregar clase para mostrar que está procesando
+        visionItem.classList.add('processing');
+        visionButton.innerHTML = `<span class="spinner"></span>Procesando...`;
+
+        const response = await fetch("/document/process-with-vision", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            temp_path_id: tempPathId,
+            user_id: userId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Error ${response.status}: ${response.statusText}\n${errorText}`
+          );
+        }
+
+        const result = await response.json();
+
+        // Eliminar el elemento de la lista de Vision pendientes
+        visionItem.remove();
+
+        // Si no hay más elementos, ocultar la sección
+        if (document.getElementById("needsVisionList").children.length === 0) {
+          document.getElementById("needsVisionSection").style.display = "none";
+        }
+
+        // Agregar a la lista de archivos procesados exitosamente
+        const successList = document.getElementById("successList");
+        if (result.success) {
+          const newItem = document.createElement("li");
+          newItem.innerHTML = `Archivo "<em>${result.document.filename}</em>" procesado con Vision (${result.document.char_count} caracteres).`;
+          
+          if (successList.querySelector("ul")) {
+            successList.querySelector("ul").appendChild(newItem);
+          } else {
+            successList.innerHTML = `<strong>✅ Procesados:</strong><ul>${newItem.outerHTML}</ul>`;
+          }
+        } else {
+          // Si no tuvo éxito, agregar a la lista de fallidos
+          const failedList = document.getElementById("failedList");
+          const newItem = document.createElement("li");
+          newItem.innerHTML = `El archivo no pudo procesarse con Vision. Motivo: ${result.reason || "Error desconocido"}.`;
+          
+          if (failedList.querySelector("ul")) {
+            failedList.querySelector("ul").appendChild(newItem);
+          } else {
+            failedList.innerHTML = `<strong>❌ Fallidos:</strong><ul>${newItem.outerHTML}</ul>`;
+          }
+        }
+      } catch (error) {
+        alert("Error al procesar con Vision:\n" + error.message);
+        console.error("Error:", error);
+        
+        // Restaurar el estado del botón en caso de error
+        const visionItem = document.querySelector(`.vision-item[data-temp-path-id="${tempPathId}"]`);
+        visionItem.classList.remove('processing');
+        visionItem.querySelector('.btn-vision').innerHTML = "Procesar con Vision";
+      }
+    }
+
+    // Función para omitir el procesamiento con Vision
+    async function skipVisionProcessing(tempPathId) {
+      try {
+        // Obtener el elemento y agregar un spinner
+        const visionItem = document.querySelector(`.vision-item[data-temp-path-id="${tempPathId}"]`);
+        const skipButton = visionItem.querySelector('.btn-skip');
+        const originalButtonText = skipButton.innerHTML;
+        
+        // Agregar clase para mostrar que está procesando
+        visionItem.classList.add('processing');
+        skipButton.innerHTML = `<span class="spinner"></span>Omitiendo...`;
+
+        const response = await fetch("/document/skip-vision-processing", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            temp_path_id: tempPathId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Error ${response.status}: ${response.statusText}\n${errorText}`
+          );
+        }
+
+        // Eliminar el elemento de la lista
+        visionItem.remove();
+
+        // Si no hay más elementos, ocultar la sección
+        if (document.getElementById("needsVisionList").children.length === 0) {
+          document.getElementById("needsVisionSection").style.display = "none";
+        }
+      } catch (error) {
+        alert("Error al omitir procesamiento:\n" + error.message);
+        console.error("Error:", error);
+        
+        // Restaurar el estado del botón en caso de error
+        const visionItem = document.querySelector(`.vision-item[data-temp-path-id="${tempPathId}"]`);
+        visionItem.classList.remove('processing');
+        visionItem.querySelector('.btn-skip').innerHTML = "Omitir";
+      }
+    }
+  </script>
+</body>
+</html>

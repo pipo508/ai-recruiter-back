@@ -1,0 +1,51 @@
+@startuml Class Diagram
+
+class User {
+    - code
+    - name
+    - dni
+    - email
+    - gender
+    - address
+    - phone
+}
+
+class Category {
+    - time
+    - tyre_type
+    - gender
+}
+
+' class Administrator {
+'     - first_name
+'     - last_name
+' }
+
+class Vehicle {
+    - code
+    - time
+    - tyre_type
+    - fuel
+    - bodywork
+}
+
+' class Spectator {
+'     - code
+'     - first_name
+'     - last_name
+'     - phone
+'     - email
+'     - address
+' }
+
+class Role {
+    - description
+    ' admin, spectator, pilot, etc.
+}
+
+Category -- User
+Category -- Vehicle
+User -- Role
+
+@enduml
+
