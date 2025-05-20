@@ -1,235 +1,231 @@
 import os
-import shutil
 import traceback
-import PyPDF2
+from datetime import datetime
 from flask import current_app
+import PyPDF2
+
 from app.models import Document
 from app.repositories.document_repository import DocumentRepository
+from app.services.OpenAIRewriteService import OpenAIRewriteService
 from app.services.OpenAIVisionService import OpenAIVisionService
-
+from app.services.aws_service import AWSService
 
 class DocumentService:
-    def __init__(self):
-        self.repository = DocumentRepository()
-        self.EXTRACTED_TEXTS_FOLDER = 'textos_extraidos'
-        self.NON_EXTRACTED_TEXTS_FOLDER = 'textos_no_extraidos'
-        os.makedirs(self.EXTRACTED_TEXTS_FOLDER, exist_ok=True)
-        os.makedirs(self.NON_EXTRACTED_TEXTS_FOLDER, exist_ok=True)
+    def __init__(self, aws_bucket: str):
+        self.repo = DocumentRepository()
+        self.rewrite_service = OpenAIRewriteService()
+        self.vision_service = OpenAIVisionService()
+        self.aws_service = AWSService()
+        self.aws_bucket = aws_bucket
 
-    def extract_text_from_pdf(self, file_path: str) -> str:
-        try:
-            current_app.logger.info(f"Extrayendo texto de: {file_path}")
-            with open(file_path, 'rb') as file:
-                reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in reader.pages:
-                    text += page.extract_text() or ""
-                return text
-        except Exception as e:
-            current_app.logger.error(f"Error al extraer texto de {file_path}: {str(e)}")
-            current_app.logger.error(traceback.format_exc())
-            return ""
-    
-    def extract_text_with_vision(self, file_path: str) -> str:
-        """
-        Extrae texto de un PDF usando OpenAI Vision cuando la extracción normal falló.
-        
-        Args:
-            file_path: Ruta al archivo PDF
-            
-        Returns:
-            Texto extraído mediante Vision API o cadena vacía si falla
-        """
-        try:
-            current_app.logger.info(f"Iniciando extracción de texto con Vision para: {file_path}")
-            vision_service = OpenAIVisionService()
-            
-            # Limitar a un número razonable de páginas para controlar costos de API
-            max_pages = int(os.getenv('VISION_MAX_PAGES', '20'))
-            text = vision_service.extract_text_from_pdf_with_vision(file_path, max_pages)
-            
-            current_app.logger.info(f"Texto extraído con Vision: {len(text)} caracteres")
-            return text
-        except Exception as e:
-            current_app.logger.error(f"Error al extraer texto con Vision de {file_path}: {str(e)}")
-            current_app.logger.error(traceback.format_exc())
-            return ""
+        # Carpetas locales en caso de fallback o debugging
+        os.makedirs('Uploads', exist_ok=True)
+        os.makedirs('textos_extraidos', exist_ok=True)
+        os.makedirs('pdf_reescritos', exist_ok=True)
+        os.makedirs('textos_no_extraidos', exist_ok=True)
 
-    def create(self, user_id: int, filename: str, firebase_path: str) -> Document:
-        document = Document(
-            user_id=user_id,
-            filename=filename,
-            firebase_path=firebase_path
-        )
-        return self.repository.create(document)
-
-    def update(self, document_id: int, status: str, char_count: int, needs_ocr: bool, ocr_processed: bool):
-        dummy_doc = Document(
-            status=status,
-            char_count=char_count,
-            needs_ocr=needs_ocr,
-            ocr_processed=ocr_processed
-        )
-        return self.repository.update(dummy_doc, document_id)
-
-    def check_duplicate(self, filename: str, user_id: int) -> Document:
-        """
-        Verifica si ya existe un documento con el mismo nombre para el usuario.
-        Utiliza un método mejorado de comparación que normaliza nombres de archivos.
-        
-        Args:
-            filename: Nombre del archivo a verificar
-            user_id: ID del usuario propietario
-            
-        Returns:
-            Document existente o None si no hay duplicado
-        """
-        current_app.logger.info(f"Verificando si existe duplicado: {filename} para user_id: {user_id}")
-        existing_doc = self.repository.find_by_filename_and_user(filename, user_id)
-        if existing_doc:
-            current_app.logger.info(f"Documento duplicado encontrado: {existing_doc.id}, {existing_doc.filename}")
-        return existing_doc
-
-    def _get_unique_filepath(self, folder: str, filename: str) -> str:
-        """
-        Devuelve un path único en folder para filename,
-        agregando sufijo incremental si existe el archivo.
-        """
-        base, ext = os.path.splitext(filename)
-        candidate = filename
-        i = 1
-        while os.path.exists(os.path.join(folder, candidate)):
-            candidate = f"{base}_{i}{ext}"
-            i += 1
-        return os.path.join(folder, candidate)
-
-    def process_pdf(self, file_path: str, user_id: int, filename: str, use_vision: bool = False):
-        """
-        Procesa un archivo PDF: extrae texto y guarda en el sistema.
-        Ahora incluye un parámetro para indicar si debe usar Vision en caso de falla.
-        
-        Args:
-            file_path: Ruta al archivo PDF
-            user_id: ID del usuario
-            filename: Nombre original del archivo
-            use_vision: Si se debe intentar con Vision cuando la extracción normal falla
-            
-        Returns:
-            Dict con el resultado del procesamiento
-        """
+    def process_pdf(self, file_path: str, user_id: int, filename: str, use_vision: bool = False) -> dict:
         try:
             current_app.logger.info(f"Procesando archivo: {filename} para user_id: {user_id}")
-            
-            # Verificar si el documento ya existe para este usuario
-            existing_document = self.check_duplicate(filename, user_id)
-            if existing_document:
-                current_app.logger.info(f"Documento duplicado encontrado: {existing_document.id}, {existing_document.filename}")
-                # Crear respuesta segura para serialización JSON
-                return {
-                    'success': False,
-                    'duplicate': True,
-                    'document': {
-                        'id': existing_document.id,
-                        'filename': existing_document.filename,
-                        'char_count': existing_document.char_count or 0
-                    },
-                    'reason': 'El documento ya ha sido cargado anteriormente',
-                    'filename': filename
-                }
-            
-            # Intentar extracción normal primero
-            text = self.extract_text_from_pdf(file_path)
-            current_app.logger.info(f"Texto extraído: {len(text)} caracteres")
 
-            # Verificar si se extrajo suficiente texto
-            text_sufficient = text and len(text) > 100
-            
-            # Si no hay suficiente texto y no se ha solicitado usar Vision todavía
-            if not text_sufficient and not use_vision:
+            if self.repo.find_by_filename_and_user(filename, user_id):
                 return {
                     'success': False,
-                    'needs_vision': True,
-                    'reason': 'Texto insuficiente o no extraíble. Se requiere procesamiento con Vision.',
-                    'filename': filename
+                    'filename': filename,
+                    'reason': 'El documento ya existe en la base de datos',
+                    'needs_vision': False
                 }
-            
-            # Si no hay texto y se nos pide usar Vision
-            if not text_sufficient and use_vision:
-                current_app.logger.info(f"Intentando extracción con Vision para: {filename}")
-                text = self.extract_text_with_vision(file_path)
-                text_sufficient = text and len(text) > 100
-                
-                # Si Vision tampoco pudo extraer texto suficiente
-                if not text_sufficient:
-                    failed_path = os.path.join(self.NON_EXTRACTED_TEXTS_FOLDER, filename)
-                    current_app.logger.info(f"Vision falló. Moviendo archivo a textos no extraídos: {failed_path}")
-                    os.makedirs(os.path.dirname(failed_path), exist_ok=True)
-                    shutil.move(file_path, failed_path)
+
+            extracted_text = self.extract_text(file_path, use_vision)
+            if not extracted_text or len(extracted_text.strip()) < 50:
+                if use_vision:
+                    os.rename(file_path, os.path.join('textos_no_extraidos', filename))
                     return {
                         'success': False,
-                        'vision_failed': True,
-                        'reason': 'No se pudo extraer texto incluso usando Vision',
-                        'filename': filename
+                        'filename': filename,
+                        'reason': 'No se pudo extraer texto suficiente con Vision',
+                        'needs_vision': False
                     }
-
-            # Si tenemos suficiente texto (sea por extracción normal o Vision)
-            if text_sufficient:
-                uploads_folder = "Uploads"
-                os.makedirs(uploads_folder, exist_ok=True)
-                unique_upload_path = self._get_unique_filepath(uploads_folder, filename)
-                current_app.logger.info(f"Guardando copia persistente del PDF en: {unique_upload_path}")
-                shutil.copy(file_path, unique_upload_path)
-
-                # Guardar texto extraído
-                text_path = os.path.join(self.EXTRACTED_TEXTS_FOLDER, f"{os.path.splitext(filename)[0]}.txt")
-                current_app.logger.info(f"Guardando texto en: {text_path}")
-                os.makedirs(os.path.dirname(text_path), exist_ok=True)
-                with open(text_path, 'w', encoding='utf-8') as text_file:
-                    text_file.write(text)
-
-                # Crear y actualizar documento
-                document = self.create(
-                    user_id=int(user_id),
-                    filename=os.path.basename(unique_upload_path),
-                    firebase_path=unique_upload_path
-                )
-                current_app.logger.info(f"Documento creado con ID: {document.id}")
-
-                # Actualizar con detalles específicos según el método de extracción
-                self.update(
-                    document_id=document.id,
-                    status='processed',
-                    char_count=len(text),
-                    needs_ocr=not bool(self.extract_text_from_pdf(file_path)),  # Marcar si se necesitó OCR
-                    ocr_processed=use_vision  # Indica si se usó Vision para la extracción
-                )
-                current_app.logger.info(f"Documento actualizado: {document.id}")
-
-                return {
-                    'success': True,
-                    'vision_used': use_vision,
-                    'document': {
-                        'id': document.id,
-                        'filename': os.path.basename(unique_upload_path),
-                        'char_count': len(text)
-                    }
-                }
-            else:
-                failed_path = os.path.join(self.NON_EXTRACTED_TEXTS_FOLDER, filename)
-                current_app.logger.info(f"Moviendo archivo a textos no extraídos: {failed_path}")
-                os.makedirs(os.path.dirname(failed_path), exist_ok=True)
-                shutil.move(file_path, failed_path)
                 return {
                     'success': False,
-                    'reason': 'Texto insuficiente o no extraíble',
-                    'filename': filename
+                    'filename': filename,
+                    'reason': 'No se pudo extraer texto del PDF',
+                    'needs_vision': True,
+                    'temp_path_id': filename  # Incluir temp_path_id para el frontend
                 }
+
+            # Reescribir texto
+            rewritten_text = self.rewrite_service.rewrite_text(extracted_text)
+            base_filename = os.path.splitext(filename)[0]
+            rewritten_filename = f"{base_filename}_reescrito.txt"
+            local_rewritten_path = os.path.join('pdf_reescritos', rewritten_filename)
+
+            try:
+                with open(local_rewritten_path, 'w', encoding='utf-8') as f:
+                    f.write(rewritten_text)
+
+                # Subir el archivo original a la carpeta curriculums/
+                s3_path = f"curriculums/{filename}"
+                file_url, final_filename = self.aws_service.subir_pdf(file_path, filename)
+                if file_url is None:
+                    raise Exception("Fallo al subir el archivo a S3")
+
+                # Actualizar s3_path si el nombre cambió debido a un conflicto
+                s3_path = f"curriculums/{final_filename}"
+            except Exception as e:
+                current_app.logger.error(f"Error al guardar o subir el archivo reescrito: {str(e)}")
+                return {
+                    'success': False,
+                    'filename': filename,
+                    'reason': 'Error al crear o subir el archivo reescrito',
+                    'needs_vision': False
+                }
+
+            # Guardar en DB
+            document = Document(
+                user_id=user_id,
+                filename=final_filename,  # Usar el nombre final (en caso de que se haya modificado)
+                storage_path=s3_path,
+                file_url=file_url,
+                status='processed',
+                char_count=len(rewritten_text),
+                needs_ocr=use_vision,
+                ocr_processed=use_vision,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+
+            saved_document = self.repo.create(document)
+
+            # Limpiar original
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                current_app.logger.warning(f"No se pudo eliminar archivo original: {file_path}. Error: {e}")
+
+            return {
+                'success': True,
+                'status': 200,  # Añadir status para el frontend
+                'document': {
+                    'id': saved_document.id,
+                    'filename': saved_document.filename,
+                    'char_count': saved_document.char_count,
+                    'file_url': saved_document.file_url
+                },
+                'rewritten_file': {
+                    'filename': rewritten_filename,
+                    's3_path': s3_path
+                }
+            }
+
         except Exception as e:
             current_app.logger.error(f"Error procesando archivo {filename}: {str(e)}")
             current_app.logger.error(traceback.format_exc())
             return {
                 'success': False,
+                'filename': filename,
                 'reason': str(e),
-                'filename': filename
+                'needs_vision': not use_vision,
+                'status': 500  # Añadir status para el frontend
             }
+
+    def extract_text(self, file_path: str, use_vision: bool) -> str:
+        try:
+            if use_vision:
+                return self.vision_service.extract_text_from_pdf_with_vision(file_path)
+
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                text = ''.join([page.extract_text() or '' for page in reader.pages])
+                return text.strip()
+
+        except Exception as e:
+            current_app.logger.error(f"Error extrayendo texto de {file_path}: {str(e)}")
+            return ""
+
+    def get_pdf(self, user_id: int, filename: str) -> dict:
+        try:
+            document = self.repo.find_by_filename_and_user(filename, user_id)
+            if not document:
+                return {
+                    'success': False,
+                    'reason': 'Documento no encontrado'
+                }
+
+            # Obtener URL para el archivo en S3
+            file_url = self.aws_service.get_file_url(document.storage_path)
+
+            return {
+                'success': True,
+                'file_url': file_url,
+                'filename': document.filename
+            }
+
+        except Exception as e:
+            current_app.logger.error(f"Error obteniendo PDF para user {user_id} y archivo {filename}: {str(e)}")
+            return {
+                'success': False,
+                'reason': str(e)
+            }
+
+    def get_all_documents(self):  # ✅ ya no acepta user_id
+        return self.repo.find_all()
+
+    def delete_file(self, s3_path: str, user_id: int) -> dict:
+        """
+        Elimina un archivo de S3 y su registro correspondiente en la base de datos.
         
+        Args:
+            s3_path (str): Ruta del archivo en el bucket (e.g., 'curriculums/nombre_archivo.pdf')
+            user_id (int): ID del usuario para verificar autorización
+        
+        Returns:
+            dict: Resultado con 'success' (True/False), 'message' y 'status' para el frontend
+        """
+        try:
+            # Validar que s3_path esté en la carpeta permitida
+            if not s3_path.startswith('curriculums/'):
+                current_app.logger.warning(f"Ruta no permitida: {s3_path}")
+                return {
+                    'success': False,
+                    'message': 'Ruta no permitida. El archivo debe estar en la carpeta curriculums/',
+                    'status': 403
+                }
+
+            # Buscar el documento en la base de datos por s3_path y user_id
+            document = self.repo.find_by_storage_path_and_user(s3_path, user_id)
+            if not document:
+                current_app.logger.warning(f"No se encontró documento con s3_path: {s3_path} para user_id: {user_id}")
+                return {
+                    'success': False,
+                    'message': f'No se encontró el archivo {s3_path} en la base de datos',
+                    'status': 404
+                }
+
+            # Eliminar el archivo de S3
+            if not self.aws_service.borrar_archivo(s3_path):
+                current_app.logger.warning(f"No se pudo eliminar el archivo de S3: {s3_path}")
+                return {
+                    'success': False,
+                    'message': f'No se pudo eliminar el archivo {s3_path} de S3',
+                    'status': 404
+                }
+
+            # Eliminar el registro de la base de datos
+            self.repo.delete(document)
+            current_app.logger.info(f"Documento eliminado de la base de datos: {document.id}, s3_path: {s3_path}")
+
+            return {
+                'success': True,
+                'message': f'Archivo {s3_path} eliminado exitosamente',
+                'status': 200
+            }
+
+        except Exception as e:
+            current_app.logger.error(f"Error al eliminar archivo {s3_path}: {str(e)}")
+            current_app.logger.error(traceback.format_exc())
+            return {
+                'success': False,
+                'message': f'Error al eliminar el archivo: {str(e)}',
+                'status': 500
+            }

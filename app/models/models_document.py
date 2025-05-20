@@ -14,7 +14,8 @@ class Document(db.Model):
         id: Identificador único del documento
         user_id: ID del usuario que subió el documento
         filename: Nombre original del archivo
-        firebase_path: Ruta de almacenamiento en Firebase
+        storage_path: Ruta o identificador del archivo en el servicio de almacenamiento
+        file_url: URL de acceso al documento almacenado
         status: Estado del procesamiento del documento
         char_count: Número de caracteres extraídos del texto
         needs_ocr: Indicador de si el documento necesita OCR
@@ -27,8 +28,9 @@ class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
-    firebase_path = db.Column(db.String(255), nullable=False)
-    status = db.Column(db.String(50), default='uploaded')  # uploaded, processing, processed, error
+    storage_path = db.Column(db.String(255), nullable=False)  # Antes firebase_path
+    file_url = db.Column(db.String(512), nullable=True)      # Antes firebase_url
+    status = db.Column(db.String(50), default='uploaded')    # uploaded, processing, processed, error
     char_count = db.Column(db.Integer, default=0)
     needs_ocr = db.Column(db.Boolean, default=False)
     ocr_processed = db.Column(db.Boolean, default=False)
@@ -44,3 +46,19 @@ class Document(db.Model):
     def __repr__(self):
         """Representación en string del objeto Document"""
         return f'<Document {self.filename}>'
+    
+    def to_dict(self):
+        """Convierte el documento a un diccionario para respuestas JSON."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'filename': self.filename,
+            'storage_path': self.storage_path,
+            'file_url': self.file_url,
+            'status': self.status,
+            'char_count': self.char_count,
+            'needs_ocr': self.needs_ocr,
+            'ocr_processed': self.ocr_processed,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

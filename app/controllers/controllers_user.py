@@ -5,8 +5,15 @@ Maneja registro, autenticación y perfil de usuarios.
 
 from flask import Blueprint, jsonify, request, current_app
 from app.services.user_service import UserService
+import jwt
+from datetime import datetime, timedelta
+from app.middleware import require_auth  # Importamos el decorador
 
 bp = Blueprint('user', __name__)
+
+# Configuración de la clave secreta (en producción, usa variables de entorno)
+SECRET_KEY = "your-secret-key-12345"  # ¡Cambia esto en producción!
+JWT_ALGORITHM = "HS256"
 
 @bp.route('/prueba', methods=['GET'])
 def prueba():
@@ -14,7 +21,6 @@ def prueba():
     Endpoint de prueba para verificar el funcionamiento del controlador.
     """
     return jsonify({'message': 'Endpoint de prueba funcionando correctamente'})
-
 
 @bp.route('/register', methods=['POST'])
 def register():
@@ -46,11 +52,10 @@ def register():
         current_app.logger.error(f"Error al registrar usuario: {str(e)}")
         return jsonify({'error': 'Error al registrar usuario'}), 500
 
-
 @bp.route('/login', methods=['POST'])
 def login():
     """
-    Autentica a un usuario y genera un token de sesión.
+    Autentica a un usuario y genera un token JWT.
     """
     data = request.get_json()
     
@@ -62,6 +67,15 @@ def login():
             username=data['username'],
             password=data['password']
         )
+        # Generar el token JWT
+        payload = {
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'exp': datetime.utcnow() + timedelta(hours=1)  # Expira en 1 hora
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
+        
         return jsonify({
             'message': 'Login exitoso',
             'user': {
@@ -69,7 +83,7 @@ def login():
                 'username': user.username,
                 'email': user.email
             },
-            'token': 'dummy_token_for_development'
+            'token': token
         })
     except ValueError as e:
         return jsonify({'error': str(e)}), 401
@@ -77,13 +91,17 @@ def login():
         current_app.logger.error(f"Error al autenticar usuario: {str(e)}")
         return jsonify({'error': 'Error al autenticar usuario'}), 500
 
-
 @bp.route('/profile/<int:user_id>', methods=['GET'])
+@require_auth
 def get_profile(user_id):
     """
     Obtiene el perfil de un usuario por su ID.
     """
     try:
+        # Verificar que el user_id coincide con el del token
+        if user_id != request.user['user_id']:
+            return jsonify({'error': 'No autorizado: user_id no coincide'}), 403
+
         user = UserService().get_profile(user_id)
         doc_count = user.documents.count() if hasattr(user, 'documents') else 0
         return jsonify({
@@ -102,9 +120,9 @@ def get_profile(user_id):
     except Exception as e:
         current_app.logger.error(f"Error al obtener perfil: {str(e)}")
         return jsonify({'error': 'Error al obtener perfil'}), 500
-    
 
 @bp.route('/profile', methods=['GET'])
+@require_auth
 def get_all_profiles():
     """
     Devuelve todos los perfiles de usuario con estadísticas básicas.
@@ -133,17 +151,21 @@ def get_all_profiles():
         current_app.logger.error(f"Error al obtener todos los perfiles: {str(e)}")
         return jsonify({'error': 'Error al obtener todos los perfiles'}), 500
 
-
 @bp.route('/profile/<int:user_id>', methods=['PUT'])
+@require_auth
 def update_profile(user_id):
     """
     Actualiza el perfil de un usuario por su ID.
     """
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No se recibieron datos para actualizar'}), 400
-    
     try:
+        # Verificar que el user_id coincide con el del token
+        if user_id != request.user['user_id']:
+            return jsonify({'error': 'No autorizado: user_id no coincide'}), 403
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos para actualizar'}), 400
+        
         user = UserService().update_profile(
             user_id=user_id,
             email=data.get('email'),

@@ -4,20 +4,6 @@ configura las extensiones y registra los blueprints.
 """
 
 import os
-from flask import Flask, request, jsonify  # Agregar request
-from flask_cors import CORS
-from dotenv import load_dotenv
-import traceback  # Agregar traceback
-
-from app.extensions import db, migrate, init_firebase, init_faiss
-from app.config.default import config
-
-"""
-Módulo principal de la aplicación Flask que inicializa la app,
-configura las extensiones y registra los blueprints.
-"""
-
-import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -52,14 +38,17 @@ def create_app(config_name=None):
     # Asegurar que exista el directorio de uploads
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    # Configurar CORS para permitir múltiples orígenes
+    # Configurar CORS para permitir múltiples orígenes y cabeceras de autorización
     allowed_origins = [
         "http://127.0.0.1:5500",    # Live Server
         "http://localhost:3000",    # Create React App
         "http://localhost:5173",    # Vite (puerto por defecto)
         "http://127.0.0.1:5173",    # Vite con IP
     ]
-    CORS(app, resources={r"/*": {"origins": allowed_origins}})
+    CORS(app, resources={r"/*": {
+        "origins": allowed_origins,
+        "allow_headers": ["Authorization", "Content-Type"]
+    }})
     app.logger.info(f"CORS configurado para orígenes: {allowed_origins}")
 
     # Registrar manejador para solicitudes
@@ -88,56 +77,6 @@ def create_app(config_name=None):
     register_shell_context(app)
 
     return app
-
-def init_extensions(app):
-    """
-    Inicializa todas las extensiones de Flask con la aplicación.
-
-    Args:
-        app: Instancia de Flask app.
-    """
-    app.logger.info("Inicializando extensiones...")
-    db.init_app(app)
-    app.logger.info("SQLAlchemy inicializado")
-    migrate.init_app(app, db)
-    app.logger.info("Flask-Migrate inicializado")
-    with app.app_context():
-        init_firebase(app)
-        init_faiss()
-
-def register_blueprints(app):
-    """
-    Registra todos los blueprints de la aplicación.
-
-    Args:
-        app: Instancia de Flask app.
-    """
-    from app.controllers.controllers_home import bp as home_bp
-    from app.controllers.controllers_user import bp as user_bp
-    from app.controllers.controllers_document import bp as document_bp
-    # from app.controllers.controllers_query import bp as query_bp
-
-    app.register_blueprint(home_bp, url_prefix="/home")
-    app.register_blueprint(user_bp, url_prefix="/user")
-    app.register_blueprint(document_bp, url_prefix="/document")
-    # app.register_blueprint(query_bp, url_prefix="/query")
-
-def register_shell_context(app):
-    """
-    Configura el contexto para el shell de Flask.
-
-    Args:
-        app: Instancia de Flask app.
-    """
-    @app.shell_context_processor
-    def ctx():
-        from app.models import User, Document
-        return {
-            "app": app,
-            "db": db,
-            "User": User,
-            "Document": Document,
-        }
 
 def init_extensions(app):
     """

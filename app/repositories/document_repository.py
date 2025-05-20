@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from flask import current_app
 import traceback
 from sqlalchemy.sql import func
+import datetime
 
 class DocumentRepository(Create, Read, Update, Delete):
     def create(self, entity: Document):
@@ -40,6 +41,7 @@ class DocumentRepository(Create, Read, Update, Delete):
                 existing_document.needs_ocr = entity.needs_ocr
             if entity.ocr_processed is not None:
                 existing_document.ocr_processed = entity.ocr_processed
+            existing_document.updated_at = datetime.utcnow()
 
             db.session.commit()
             current_app.logger.info(f"Documento actualizado: {id}")
@@ -60,63 +62,67 @@ class DocumentRepository(Create, Read, Update, Delete):
         return Document.query.get(id)
 
     def find_all(self):
+        """Retorna todos los documentos"""
         current_app.logger.info("Obteniendo todos los documentos")
         return Document.query.all()
-    
+
     def find_by_filename_and_user(self, filename: str, user_id: int):
-        """
-        Busca un documento por nombre de archivo y ID de usuario.
-        Utiliza una búsqueda no sensible a casos (case-insensitive).
-        
-        Args:
-            filename: Nombre del archivo a buscar
-            user_id: ID del usuario propietario
-            
-        Returns:
-            Document o None si no se encuentra
-        """
-        current_app.logger.info(f"Buscando documento con nombre: {filename} para user_id: {user_id}")
-        # Eliminar la extensión para una coincidencia más flexible
+        current_app.logger.info(f"Buscando documento con nombre: {filename} en toda la base de datos")
         base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
-        
-        # Normalizar el nombre base quitando guiones bajos y espacios
         normalized_base = base_name.replace('_', '').replace(' ', '').lower()
-        
-        # Buscar documentos del usuario
-        documents = Document.query.filter(Document.user_id == user_id).all()
-        
-        # Comparar normalizando cada nombre de archivo
+
+        documents = Document.query.all()
+
         for doc in documents:
             doc_base = doc.filename.rsplit('.', 1)[0] if '.' in doc.filename else doc.filename
             doc_normalized = doc_base.replace('_', '').replace(' ', '').lower()
-            
+
             if doc_normalized == normalized_base:
                 current_app.logger.info(f"Documento encontrado (normalizado): {doc.id}, {doc.filename}")
                 return doc
-                
-        # Caída al método anterior si no se encuentra por normalización
+
         result = Document.query.filter(
-            Document.user_id == user_id,
             Document.filename.ilike(f"%{base_name}%")
         ).first()
-        
+
         if result:
             current_app.logger.info(f"Documento encontrado: {result.id}, {result.filename}")
         else:
-            current_app.logger.info(f"No se encontró documento con nombre similar a: {filename} para user_id: {user_id}")
-        
+            current_app.logger.info(f"No se encontró documento con nombre similar a: {filename}")
+
         return result
 
-    def delete(self, entity: Document, id: int):
-        current_app.logger.info(f"Eliminando documento con ID: {id}")
+    def find_by_storage_path_and_user(self, storage_path: str, user_id: int):
+        """
+        Busca un documento por su storage_path y user_id.
+        
+        Args:
+            storage_path (str): Ruta del archivo en S3
+            user_id (int): ID del usuario
+            
+        Returns:
+            Document: El documento encontrado o None si no existe
+        """
+        current_app.logger.info(f"Buscando documento con storage_path: {storage_path} para user_id: {user_id}")
+        document = Document.query.filter_by(storage_path=storage_path, user_id=user_id).first()
+        if document:
+            current_app.logger.info(f"Documento encontrado: {document.id}, {document.filename}")
+        else:
+            current_app.logger.info(f"No se encontró documento con storage_path: {storage_path}")
+        return document
+
+    def delete(self, entity: Document):
+        """
+        Elimina un documento de la base de datos.
+        
+        Args:
+            entity (Document): Objeto Document a eliminar
+        """
+        current_app.logger.info(f"Eliminando documento con ID: {entity.id}")
         try:
-            document = Document.query.get(id)
-            if not document:
-                raise ValueError("Documento no encontrado")
-            db.session.delete(document)
+            db.session.delete(entity)
             db.session.commit()
-            current_app.logger.info(f"Documento eliminado: {id}")
-            return True
+            current_app.logger.info(f"Documento eliminado: {entity.id}")
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error al eliminar documento: {str(e)}")

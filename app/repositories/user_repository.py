@@ -76,3 +76,4 @@ class UserRepository(Create, Read, Update, Delete):
     def get_all_users(self):
         return User.query.all()
 
+    
