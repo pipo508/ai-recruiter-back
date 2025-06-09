@@ -1,3 +1,4 @@
+
 """
 Módulo principal de la aplicación Flask que inicializa la app,
 configura las extensiones y registra los blueprints.
@@ -9,7 +10,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import traceback
 
-from app.extensions import db, migrate, init_firebase, init_faiss
+from app.extensions import db, migrate, init_faiss
 from app.config.default import config
 
 def create_app(config_name=None):
@@ -67,6 +68,11 @@ def create_app(config_name=None):
             'traceback': traceback.format_exc()
         }), 500
 
+    # Importar modelos para asegurar que estén registrados
+    from app.models.models_user import User
+    from app.models.models_document import Document
+    from app.models.models_vector_embedding import VectorEmbedding
+
     # Inicializar extensiones
     init_extensions(app)
 
@@ -91,24 +97,19 @@ def init_extensions(app):
     migrate.init_app(app, db)
     app.logger.info("Flask-Migrate inicializado")
     with app.app_context():
-        init_firebase(app)
         init_faiss()
 
 def register_blueprints(app):
-    """
-    Registra todos los blueprints de la aplicación.
-
-    Args:
-        app: Instancia de Flask app.
-    """
     from app.controllers.controllers_home import bp as home_bp
     from app.controllers.controllers_user import bp as user_bp
     from app.controllers.controllers_document import bp as document_bp
+    from app.controllers.controllers_search import bp as search_bp
     # from app.controllers.controllers_query import bp as query_bp
 
     app.register_blueprint(home_bp, url_prefix="/home")
     app.register_blueprint(user_bp, url_prefix="/user")
     app.register_blueprint(document_bp, url_prefix="/document")
+    app.register_blueprint(search_bp, url_prefix="/search")
     # app.register_blueprint(query_bp, url_prefix="/query")
 
 def register_shell_context(app):
@@ -120,10 +121,22 @@ def register_shell_context(app):
     """
     @app.shell_context_processor
     def ctx():
-        from app.models import User, Document
+        from app.models.models_user import User
+        from app.models.models_document import Document
+        from app.models.models_vector_embedding import VectorEmbedding
         return {
             "app": app,
             "db": db,
             "User": User,
             "Document": Document,
+            "VectorEmbedding": VectorEmbedding
         }
+
+def init_extensions(app):
+    # ...
+    db.init_app(app)
+    # ...
+    migrate.init_app(app, db)
+    # ...
+    with app.app_context():
+        init_faiss(app) # Pasar la instancia de la app

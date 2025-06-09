@@ -16,7 +16,6 @@ class User(db.Model):
     password_hash = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    text_json = db.Column(db.JSON, nullable=True) # Campo JSON para almacenar el json del texto
 
 
     # Relaciones

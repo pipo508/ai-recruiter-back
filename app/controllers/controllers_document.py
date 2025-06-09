@@ -3,6 +3,10 @@ from werkzeug.utils import secure_filename
 from app.services.document_service import DocumentService
 from app.middleware import require_auth
 import os
+import json
+from app.extensions import db
+from app.services.OpenAIService import OpenAIRewriteService
+from app.models.models_document import Document
 import traceback
 
 bp = Blueprint('document', __name__, static_folder='static')
@@ -54,7 +58,7 @@ def process_pdfs():
         processed_documents = []
         failed_documents = []
         needs_vision_documents = []
-        rewritten_files = []
+        embedding_files = []
 
         for file in files:
             if file.filename == '':
@@ -69,7 +73,10 @@ def process_pdfs():
                 if result['success']:
                     doc_info = result['document']
                     processed_documents.append(doc_info)
-                    rewritten_files.append(result['rewritten_file'])
+                    embedding_files.append({
+                        'document_id': doc_info['id'],
+                        'embedding_model': current_app.config.get('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small')
+                    })
                     extracted_filename = None
                     if 'extracted_filename' in result:
                         extracted_filename = result['extracted_filename']
@@ -87,13 +94,15 @@ def process_pdfs():
                         'filename': result['filename'],
                         'reason': result['reason']
                     })
-                    if os.path.exists(temp_path): os.remove(temp_path)
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
             except Exception as e:
                 current_app.logger.error(f"Error procesando archivo {file.filename}: {str(e)}")
                 current_app.logger.error(traceback.format_exc())
                 failed_documents.append({'filename': file.filename, 'reason': str(e)})
                 temp_path = locals().get('temp_path')
-                if temp_path and os.path.exists(temp_path): os.remove(temp_path)
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
 
         if not needs_vision_documents:
             try:
@@ -107,11 +116,11 @@ def process_pdfs():
             return {k: (v if isinstance(v, (str, int, float, bool)) else str(v) if v is not None else "") for k, v in d.items()}
 
         response = {
-            'message': f"Procesados {len(processed_documents)} documentos, requieren Vision {len(needs_vision_documents)}, fallidos {len(failed_documents)}, reescritos {len(rewritten_files)}",
+            'message': f"Procesados {len(processed_documents)} documentos, requieren Vision {len(needs_vision_documents)}, fallidos {len(failed_documents)}, embeddings {len(embedding_files)}",
             'processed': [safe_dict(doc) for doc in processed_documents],
             'needs_vision': [{'filename': d['filename'], 'reason': d['reason'], 'temp_path_id': os.path.basename(d['temp_path'])} for d in needs_vision_documents],
             'failed': [safe_dict(doc) for doc in failed_documents],
-            'rewritten': [safe_dict(file) for file in rewritten_files]
+            'embeddings': [safe_dict(file) for file in embedding_files]
         }
         return jsonify(response), 200
     except Exception as e:
@@ -143,10 +152,22 @@ def process_with_vision():
         if result['success']:
             clean_intermediate_files(temp_path_id)
             doc_info = result['document']
-            return jsonify({'success': True, 'message': 'Documento procesado correctamente con Vision', 'document': {k: v for k, v in doc_info.items()}, 'vision_used': True, 'rewritten': [result.get('rewritten_file', {})]}), 200
+            return jsonify({
+                'success': True,
+                'message': 'Documento procesado correctamente con Vision',
+                'document': {k: v for k, v in doc_info.items()},
+                'vision_used': True,
+                'rewritten': [result.get('rewritten_file', {})],
+                'embeddings': [result.get('embedding_file', {})]
+            }), 200
         else:
-            if os.path.exists(temp_path): os.remove(temp_path)
-            return jsonify({'success': False, 'message': 'No se pudo procesar el documento con Vision', 'reason': result.get('reason', 'Error desconocido')}), 200
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return jsonify({
+                'success': False,
+                'message': 'No se pudo procesar el documento con Vision',
+                'reason': result.get('reason', 'Error desconocido')
+            }), 200
     except Exception as e:
         current_app.logger.error(f"Error en process_with_vision: {str(e)}")
         current_app.logger.error(traceback.format_exc())
@@ -169,19 +190,6 @@ def skip_vision_processing():
         current_app.logger.error(f"Error en skip_vision_processing: {str(e)}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
-
-@bp.route('/download-rewritten/<filename>', methods=['GET'])
-@require_auth
-def download_rewritten(filename):
-    try:
-        safe_filename = secure_filename(filename)
-        file_path = os.path.join(PDF_REESCRITOS, safe_filename)
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'Archivo no encontrado'}), 404
-        return send_from_directory(directory=PDF_REESCRITOS, path=safe_filename, as_attachment=True)
-    except Exception as e:
-        current_app.logger.error(f"Error al descargar archivo: {str(e)}")
-        return jsonify({'error': 'Error al descargar archivo'}), 500
 
 @bp.route('/upload-form', methods=['GET'])
 def upload_form():
@@ -228,7 +236,7 @@ def list_documents():
         aws_bucket = os.getenv('AWS_BUCKET')
         doc_service = DocumentService(aws_bucket)
 
-        docs = doc_service.get_all_documents()  # ✅ sin user_id
+        docs = doc_service.get_all_documents()
         return jsonify([doc.to_dict() for doc in docs]), 200
 
     except Exception as e:
@@ -243,7 +251,7 @@ def delete_file():
         data = request.get_json() or {}
         s3_path = data.get('s3_path')
 
-        current_app.logger.info(f"Delete file received s3_path: {s3_path}")  # <---- Aquí
+        current_app.logger.info(f"Delete file received s3_path: {s3_path}")
 
         if not s3_path:
             return jsonify({'error': 'Se requiere s3_path', 'status': 400}), 400
@@ -264,3 +272,52 @@ def delete_file():
         current_app.logger.error(f"Error en delete_file: {str(e)}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Error interno del servidor', 'details': str(e), 'status': 500}), 500
+
+@bp.route('/<int:document_id>', methods=['GET'])
+@require_auth
+def get_document(document_id):
+    """
+    Obtiene un documento por su ID y devuelve la información estructurada del perfil
+    """
+    try:
+        current_app.logger.info(f"Solicitando documento con ID: {document_id}")
+        
+        document = Document.query.get(document_id)
+        if not document:
+            current_app.logger.warning(f"Documento con ID {document_id} no encontrado")
+            return jsonify({'error': 'Documento no encontrado'}), 404
+
+        # Si ya existe el JSON estructurado, usarlo; sino, generarlo
+        if document.text_json:
+            current_app.logger.info(f"Usando JSON existente para documento {document_id}")
+            profile = document.text_json
+        else:
+            try:
+                current_app.logger.info(f"Generando nuevo JSON para documento {document_id}")
+                openai_service = OpenAIRewriteService()
+                profile = openai_service.structure_profile(document.rewritten_text)
+                
+                # Guardar el JSON estructurado en la base de datos
+                document.text_json = profile
+                db.session.commit()
+                current_app.logger.info(f"JSON guardado en base de datos para documento {document_id}")
+                
+            except Exception as e:
+                current_app.logger.warning(f"Error al estructurar el perfil para documento {document_id}: {str(e)}")
+                profile = {}
+
+        response_data = {
+            'document_id': document.id,
+            'user_id': document.user_id,
+            'filename': document.filename,
+            'profile': profile
+        }
+
+        current_app.logger.info(f"Devolviendo datos del documento {document_id}")
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener documento {document_id}: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+    

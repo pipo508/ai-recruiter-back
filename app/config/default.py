@@ -18,6 +18,11 @@ class Config:
     DEBUG = False
     TESTING = False
     
+    # Configuración de FAISS
+    FAISS_INDEX_PATH = os.path.join(os.getcwd(), 'instance', 'main_faiss.index')
+    FAISS_EMBEDDING_DIMENSION = 3072 #si usas text-embedding-3-large con esa dimensión. ¡Verifica esto!
+
+
     # Configuración de la base de datos
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DB_USER = os.getenv('DB_USER')
@@ -27,17 +32,13 @@ class Config:
     DB_NAME = os.getenv('DB_NAME')
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     
-    # Configuración de Firebase
-    FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH')
-    FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET')
-    
     # Configuración de OpenAI
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    OPENAI_EMBEDDING_MODEL = os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small')
+    OPENAI_EMBEDDING_MODEL = os.getenv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-large')
     OPENAI_COMPLETION_MODEL = os.getenv('OPENAI_COMPLETION_MODEL', 'gpt-4o')
     
     # Configuración de la aplicación
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # Limita el tamaño de subida a 16MB
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # Limita el tamaño de subida a 16MB
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
     ALLOWED_EXTENSIONS = {'pdf'}
     MIN_TEXT_LENGTH = 100  # Mínimo número de caracteres para considerar válido un texto

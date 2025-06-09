@@ -128,3 +128,24 @@ class DocumentRepository(Create, Read, Update, Delete):
             current_app.logger.error(f"Error al eliminar documento: {str(e)}")
             current_app.logger.error(traceback.format_exc())
             raise Exception(f"Error al eliminar el documento: {str(e)}")
+        
+    def find_by_storage_path(self, path):
+        return Document.query.filter_by(storage_path=path).first()
+    
+    def find_by_user_id_without_json(self, user_id: int):
+        """
+        Encuentra todos los documentos de un usuario que no tienen JSON válido
+        (text_json es NULL o es un diccionario vacío)
+        """
+        from sqlalchemy import or_, and_
+        
+        return Document.query.filter(
+            and_(
+                Document.user_id == user_id,
+                or_(
+                    Document.text_json.is_(None),  # NULL
+                    Document.text_json == {},       # Diccionario vacío
+                    Document.text_json == []        # Array vacío (por si acaso)
+                )
+            )
+        ).all()
