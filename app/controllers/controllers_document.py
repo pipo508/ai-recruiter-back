@@ -4,6 +4,8 @@ from app.services.document_service import DocumentService
 from app.middleware import require_auth
 import os
 import json
+from sqlalchemy.orm.attributes import flag_modified
+import collections.abc
 from app.extensions import db
 from app.services.OpenAIService import OpenAIRewriteService
 from app.models.models_document import Document
@@ -320,4 +322,72 @@ def get_document(document_id):
         current_app.logger.error(f"Error al obtener documento {document_id}: {str(e)}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
-    
+
+
+# (Añade este código al final de controllers_document.py)
+
+def deep_update(d, u):
+    """
+    Realiza una actualización profunda (recursiva) de un diccionario.
+    """
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+@bp.route('/<int:document_id>', methods=['PUT'])
+@require_auth
+def update_document(document_id):
+    """
+    Actualiza el perfil JSON de un documento existente.
+    Permite actualizaciones parciales fusionando los datos nuevos.
+    """
+    try:
+        # Obtener el documento de la base de datos
+        document = Document.query.get(document_id)
+        if not document:
+            return jsonify({'error': 'Documento no encontrado'}), 404
+
+        # Verificar permisos
+        if document.user_id != request.user['user_id']:
+            return jsonify({'error': 'No autorizado para modificar este documento'}), 403
+
+        # Obtener los nuevos datos del cuerpo de la solicitud
+        new_data = request.get_json()
+        if not new_data:
+            return jsonify({'error': 'No se proporcionaron datos para actualizar'}), 400
+
+        # --- INICIO DE LA MODIFICACIÓN ---
+
+        # 1. Obtener el JSON existente o un diccionario vacío si no hay nada
+        existing_profile = document.text_json or {}
+
+        # 2. Fusionar los datos nuevos con los existentes de forma recursiva
+        updated_profile = deep_update(existing_profile, new_data)
+
+        # 3. Asignar el JSON fusionado de vuelta al documento
+        document.text_json = updated_profile
+        
+        # 4. Notificar a SQLAlchemy que el campo JSON ha sido modificado internamente
+        flag_modified(document, "text_json")
+
+        # --- FIN DE LA MODIFICACIÓN ---
+
+        document.updated_at = db.func.now()
+
+        # Guardar los cambios en la base de datos
+        db.session.commit()
+
+        current_app.logger.info(f"Perfil del documento ID {document_id} actualizado exitosamente.")
+        
+        # Devolver el documento actualizado como confirmación
+        return jsonify(document.to_dict()), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al actualizar el documento {document_id}: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500

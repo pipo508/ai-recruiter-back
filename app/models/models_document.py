@@ -60,5 +60,6 @@ class Document(db.Model):
             'needs_ocr': self.needs_ocr,
             'ocr_processed': self.ocr_processed,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'text_json': self.text_json, 
         }

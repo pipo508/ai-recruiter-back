@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import current_app
 import PyPDF2
 import numpy as np
+from app.extensions import db
 
 from app.models.models_document import Document # Importar Document desde su archivo
 from app.models.models_vector_embedding import VectorEmbedding # Importar VectorEmbedding desde su archivo
