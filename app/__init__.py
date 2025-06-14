@@ -1,16 +1,16 @@
-
 """
 Módulo principal de la aplicación Flask que inicializa la app,
 configura las extensiones y registra los blueprints.
 """
 
 import os
-from flask import Flask, request, jsonify
+import logging
+from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from dotenv import load_dotenv
 import traceback
 
-from app.extensions import db, migrate, init_faiss
+from app.Extensions import db, migrate, init_faiss
 from app.config.default import config
 
 def create_app(config_name=None):
@@ -34,7 +34,15 @@ def create_app(config_name=None):
 
     # Cargar configuración
     app.config.from_object(config[config_name])
-    app.logger.info(f"Aplicación inicializada con configuración: {config_name}")
+    app.logger.info(f"[INFO] Aplicación inicializada. Configuración activa: '{config_name}'.")
+
+    # --- Limpieza de Logs ---
+    # MODIFICACIÓN: Asegurar que SQLAlchemy no muestre logs de consultas
+    app.config['SQLALCHEMY_ECHO'] = False
+    
+    # Desactiva los logs detallados de SQLAlchemy para mantener la consola limpia.
+    # Solo mostrará mensajes de ADVERTENCIA (WARNING) o superiores.
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
     # Asegurar que exista el directorio de uploads
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -50,28 +58,38 @@ def create_app(config_name=None):
         "origins": allowed_origins,
         "allow_headers": ["Authorization", "Content-Type"]
     }})
-    app.logger.info(f"CORS configurado para orígenes: {allowed_origins}")
+    app.logger.info(f"[INFO] CORS configurado. Orígenes permitidos: {allowed_origins}.")
 
     # Registrar manejador para solicitudes
     @app.before_request
     def log_request():
-        app.logger.info(f"Solicitud recibida: {request.method} {request.url}")
+        if request.path != '/favicon.ico': # Evita logs innecesarios
+            # MODIFICACIÓN: Cambiado de .info a .debug para reducir la verbosidad
+            current_app.logger.debug(f"[DEBUG] Solicitud entrante: {request.method} {request.url}")
 
     # Manejador de errores global
     @app.errorhandler(Exception)
     def handle_error(error):
-        app.logger.error(f"Error no manejado: {str(error)}")
-        app.logger.error(traceback.format_exc())
+        error_route = request.url if request else "ruta desconocida"
+        error_message = f"Se ha producido un error no controlado en la ruta '{error_route}'."
+        suggestion = "Revisar el traceback para identificar la causa del fallo en el código."
+        
+        current_app.logger.error(
+            f"[ERROR] {error_message}\n"
+            f"  [Tipo de Error] {type(error).__name__}: {str(error)}\n"
+            f"  [Sugerencia] {suggestion}\n"
+            f"  [TRACEBACK]\n{traceback.format_exc()}"
+        )
+        
         return jsonify({
             'error': 'Error interno del servidor',
-            'details': str(error),
-            'traceback': traceback.format_exc()
+            'details': str(error)
         }), 500
 
     # Importar modelos para asegurar que estén registrados
-    from app.models.models_user import User
-    from app.models.models_document import Document
-    from app.models.models_vector_embedding import VectorEmbedding
+    from app.models.User import User
+    from app.models.Document import Document
+    from app.models.VectorEmbedding import VectorEmbedding
 
     # Inicializar extensiones
     init_extensions(app)
@@ -91,26 +109,29 @@ def init_extensions(app):
     Args:
         app: Instancia de Flask app.
     """
-    app.logger.info("Inicializando extensiones...")
+    app.logger.info("[INFO] Inicializando extensiones de Flask...")
     db.init_app(app)
-    app.logger.info("SQLAlchemy inicializado")
+    app.logger.info("[INFO] Extensión SQLAlchemy inicializada.")
     migrate.init_app(app, db)
-    app.logger.info("Flask-Migrate inicializado")
+    app.logger.info("[INFO] Extensión Flask-Migrate inicializada.")
     with app.app_context():
-        init_faiss()
+        init_faiss(app)
+    app.logger.info("[INFO] Índice FAISS inicializado.")
+
 
 def register_blueprints(app):
-    from app.controllers.controllers_home import bp as home_bp
-    from app.controllers.controllers_user import bp as user_bp
-    from app.controllers.controllers_document import bp as document_bp
-    from app.controllers.controllers_search import bp as search_bp
-    # from app.controllers.controllers_query import bp as query_bp
-
+    """Registra todos los blueprints en la aplicación."""
+    from app.controllers.ControllersHome import bp as home_bp
+    from app.controllers.ControllersUser import bp as user_bp
+    from app.controllers.ControllersDocument import bp as document_bp
+    from app.controllers.ControllersSearch import bp as search_bp
+    
+    app.logger.info("[INFO] Registrando blueprints...")
     app.register_blueprint(home_bp, url_prefix="/home")
     app.register_blueprint(user_bp, url_prefix="/user")
     app.register_blueprint(document_bp, url_prefix="/document")
     app.register_blueprint(search_bp, url_prefix="/search")
-    # app.register_blueprint(query_bp, url_prefix="/query")
+    app.logger.info("[INFO] Blueprints registrados correctamente.")
 
 def register_shell_context(app):
     """
@@ -121,9 +142,9 @@ def register_shell_context(app):
     """
     @app.shell_context_processor
     def ctx():
-        from app.models.models_user import User
-        from app.models.models_document import Document
-        from app.models.models_vector_embedding import VectorEmbedding
+        from app.models.User import User
+        from app.models.Document import Document
+        from app.models.VectorEmbedding import VectorEmbedding
         return {
             "app": app,
             "db": db,
@@ -131,12 +152,3 @@ def register_shell_context(app):
             "Document": Document,
             "VectorEmbedding": VectorEmbedding
         }
-
-def init_extensions(app):
-    # ...
-    db.init_app(app)
-    # ...
-    migrate.init_app(app, db)
-    # ...
-    with app.app_context():
-        init_faiss(app) # Pasar la instancia de la app

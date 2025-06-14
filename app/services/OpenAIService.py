@@ -3,7 +3,7 @@ import json
 import numpy as np
 from openai import OpenAI
 from flask import current_app
-from app.promts  import REWRITE_PROMPT, STRUCTURE_PROMPT  # <-- importación nueva
+from app.Promts  import REWRITE_PROMPT, STRUCTURE_PROMPT  # <-- importación nueva
 
 class OpenAIRewriteService:
     def __init__(self):
