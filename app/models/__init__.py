@@ -6,6 +6,9 @@ y asegurar que las relaciones de SQLAlchemy se configuren correctamente.
 
 from .models_user import User
 from .models_document import Document
+from .models_vector_embedding import VectorEmbedding
+
+
 # Otros modelos comentados hasta que se implementen
 # from .text_block import TextBlock
 # from .vector import VectorEmbedding

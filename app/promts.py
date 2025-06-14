@@ -19,6 +19,8 @@ Cantidad de proyectos/trabajos:
 Descripción profesional:
 GitHub:
 Email:
+Número de teléfono:
+Ubicación:
 Habilidades clave:
 
 Candidato ideal:
@@ -63,6 +65,8 @@ Estructura esperada:
 "Descripción profesional": "Descripción breve",
 "GitHub": "https://github.com/usuario",
 "Email": "email@dominio.com",
+"Número de teléfono": "+54 9 11 1234-5678",
+"Ubicación": "Buenos Aires, Argentina",
 "Habilidades clave": ["Python", "Flask"],
 "Candidato ideal": "Descripción breve del candidato ideal (máx. 30 palabras)",
 "Experiencia Profesional": [

@@ -275,11 +275,14 @@ def delete_file():
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Error interno del servidor', 'details': str(e), 'status': 500}), 500
 
+# controllers_document.py
+
 @bp.route('/<int:document_id>', methods=['GET'])
 @require_auth
 def get_document(document_id):
     """
     Obtiene un documento por su ID y devuelve la información estructurada del perfil
+    desde el modelo Candidate asociado.
     """
     try:
         current_app.logger.info(f"Solicitando documento con ID: {document_id}")
@@ -289,30 +292,38 @@ def get_document(document_id):
             current_app.logger.warning(f"Documento con ID {document_id} no encontrado")
             return jsonify({'error': 'Documento no encontrado'}), 404
 
-        # Si ya existe el JSON estructurado, usarlo; sino, generarlo
-        if document.text_json:
-            current_app.logger.info(f"Usando JSON existente para documento {document_id}")
-            profile = document.text_json
+        profile_data = None
+        # Verificar si ya existe un candidato asociado a este documento
+        if document.candidate:
+            current_app.logger.info(f"Usando perfil de candidato existente para documento {document_id}")
+            profile_data = document.candidate.to_dict()
         else:
+            # Si no hay candidato, se puede crear uno a partir del texto reescrito
             try:
-                current_app.logger.info(f"Generando nuevo JSON para documento {document_id}")
-                openai_service = OpenAIRewriteService()
-                profile = openai_service.structure_profile(document.rewritten_text)
+                current_app.logger.info(f"No se encontró candidato, generando nuevo perfil para documento {document_id}")
+                doc_service = DocumentService(aws_bucket=os.getenv('AWS_BUCKET')) # o inyectar de otra forma
                 
-                # Guardar el JSON estructurado en la base de datos
-                document.text_json = profile
-                db.session.commit()
-                current_app.logger.info(f"JSON guardado en base de datos para documento {document_id}")
-                
+                # Se asume que el texto reescrito está disponible
+                if document.rewritten_text:
+                    # Usar el servicio para crear el candidato y guardarlo en la BD
+                    candidate = doc_service.create_candidate_from_text(document.rewritten_text, document.id)
+                    if candidate:
+                        profile_data = candidate.to_dict()
+                        current_app.logger.info(f"Candidato creado y guardado para documento {document_id}")
+                    else:
+                        profile_data = {} # Falló la creación
+                else:
+                    profile_data = {} # No hay texto para procesar
+
             except Exception as e:
-                current_app.logger.warning(f"Error al estructurar el perfil para documento {document_id}: {str(e)}")
-                profile = {}
+                current_app.logger.warning(f"Error al crear el perfil del candidato para documento {document_id}: {str(e)}")
+                profile_data = {}
 
         response_data = {
             'document_id': document.id,
             'user_id': document.user_id,
             'filename': document.filename,
-            'profile': profile
+            'profile': profile_data
         }
 
         current_app.logger.info(f"Devolviendo datos del documento {document_id}")
@@ -342,52 +353,76 @@ def deep_update(d, u):
 @require_auth
 def update_document(document_id):
     """
-    Actualiza el perfil JSON de un documento existente.
-    Permite actualizaciones parciales fusionando los datos nuevos.
+    Actualiza el perfil de un candidato existente asociado a un documento.
+    Este endpoint recibe un JSON con los campos a actualizar.
     """
     try:
-        # Obtener el documento de la base de datos
+        # --- 1. Buscar el documento y el candidato asociado ---
         document = Document.query.get(document_id)
         if not document:
             return jsonify({'error': 'Documento no encontrado'}), 404
 
-        # Verificar permisos
+        # --- 2. Verificar Permisos ---
+        # Comprueba si el usuario que hace la solicitud es el dueño del documento.
         if document.user_id != request.user['user_id']:
             return jsonify({'error': 'No autorizado para modificar este documento'}), 403
 
-        # Obtener los nuevos datos del cuerpo de la solicitud
+        # Accede al perfil del candidato a través de la relación definida en los modelos.
+        candidate = document.candidate
+        if not candidate:
+            return jsonify({'error': 'No existe un perfil de candidato para este documento'}), 404
+
+        # --- 3. Obtener y validar los datos de entrada ---
         new_data = request.get_json()
         if not new_data:
             return jsonify({'error': 'No se proporcionaron datos para actualizar'}), 400
 
-        # --- INICIO DE LA MODIFICACIÓN ---
+        # --- 4. Mapear claves del JSON a atributos del Modelo ---
+        # Este diccionario es clave para traducir las claves del frontend
+        # a los nombres de las columnas en la tabla 'candidates'.
+        key_to_attribute_map = {
+            "Nombre completo": "nombre_completo",
+            "Puesto actual": "puesto_actual",
+            "Habilidad principal": "habilidad_principal",
+            "Años de experiencia total": "anios_experiencia",
+            "Cantidad de proyectos/trabajos": "cantidad_proyectos",
+            "Descripción profesional": "descripcion_profesional",
+            "GitHub": "github",
+            "Email": "email",
+            "Número de teléfono": "telefono",
+            "Ubicación": "ubicacion",
+            "Candidato ideal": "candidato_ideal",
+            "Habilidades clave": "habilidades_clave", # Campo JSON (lista de strings)
+            "Experiencia Profesional": "experiencia_profesional", # Campo JSON (lista de objetos)
+            "Educación": "educacion" # Campo JSON (lista de objetos)
+        }
 
-        # 1. Obtener el JSON existente o un diccionario vacío si no hay nada
-        existing_profile = document.text_json or {}
-
-        # 2. Fusionar los datos nuevos con los existentes de forma recursiva
-        updated_profile = deep_update(existing_profile, new_data)
-
-        # 3. Asignar el JSON fusionado de vuelta al documento
-        document.text_json = updated_profile
+        # --- 5. Actualizar el objeto 'candidate' dinámicamente ---
+        # Itera sobre los datos recibidos en el JSON de la solicitud.
+        for key, value in new_data.items():
+            attribute_name = key_to_attribute_map.get(key)
+            # Si la clave existe en el mapa y el candidato tiene ese atributo...
+            if attribute_name and hasattr(candidate, attribute_name):
+                # ...actualiza el atributo con el nuevo valor.
+                # setattr() es como hacer 'candidate.nombre_completo = "nuevo valor"'.
+                # Funciona perfectamente para campos JSON también.
+                setattr(candidate, attribute_name, value)
         
-        # 4. Notificar a SQLAlchemy que el campo JSON ha sido modificado internamente
-        flag_modified(document, "text_json")
-
-        # --- FIN DE LA MODIFICACIÓN ---
-
+        # Actualiza las fechas de modificación.
+        candidate.updated_at = db.func.now()
         document.updated_at = db.func.now()
 
-        # Guardar los cambios en la base de datos
+        # --- 6. Guardar los cambios en la Base de Datos ---
         db.session.commit()
 
-        current_app.logger.info(f"Perfil del documento ID {document_id} actualizado exitosamente.")
+        current_app.logger.info(f"Perfil del candidato para el documento ID {document_id} actualizado exitosamente.")
         
-        # Devolver el documento actualizado como confirmación
-        return jsonify(document.to_dict()), 200
+        # Devuelve el perfil completo y actualizado como confirmación.
+        return jsonify(candidate.to_dict()), 200
 
     except Exception as e:
+        # Si algo falla, revierte la transacción para no dejar datos corruptos.
         db.session.rollback()
-        current_app.logger.error(f"Error al actualizar el documento {document_id}: {str(e)}")
+        current_app.logger.error(f"Error al actualizar el candidato para el documento {document_id}: {str(e)}")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
