@@ -110,10 +110,6 @@ class DocumentService:
         if not document:
             return {'success': False, 'message': 'Documento no encontrado', 'status': 404}
 
-        if document.user_id != requesting_user_id:
-            current_app.logger.warning(f"[ADVERTENCIA] Intento de acceso no autorizado al documento {document_id} por el usuario {requesting_user_id}.")
-            return {'success': False, 'message': 'No autorizado', 'status': 403}
-
         profile_data = {}
         if document.candidate:
             profile_data = document.candidate.to_dict()
@@ -136,9 +132,6 @@ class DocumentService:
         if not document:
             return {'success': False, 'message': 'Documento no encontrado', 'status': 404}
 
-        if document.user_id != requesting_user_id:
-            current_app.logger.warning(f"[ADVERTENCIA] Intento de modificación no autorizada del documento {document_id} por el usuario {requesting_user_id}.")
-            return {'success': False, 'message': 'No autorizado para modificar este documento', 'status': 403}
 
         if not document.candidate:
             return {'success': False, 'message': 'No existe un perfil de candidato para este documento', 'status': 404}
@@ -169,8 +162,6 @@ class DocumentService:
             document = self.repo.find_by_storage_path(s3_path)
             if not document:
                 return {'success': False, 'message': 'Archivo no encontrado en la base de datos', 'status': 404}
-            if document.user_id != user_id:
-                 return {'success': False, 'message': 'No autorizado', 'status': 403}
 
             if not self.aws_service.borrar_archivo(s3_path):
                 current_app.logger.warning(f"[ADVERTENCIA] No se pudo eliminar el archivo de S3 en la ruta '{s3_path}'. Se procederá a eliminar los registros de la base de datos de todos modos.")

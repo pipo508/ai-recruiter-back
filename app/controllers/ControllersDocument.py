@@ -266,9 +266,6 @@ def get_pdf():
     try:
         if not user_id or not filename:
             return jsonify({'error': 'Faltan parámetros user_id o filename'}), 400
-        if user_id != request.user['user_id']:
-            return jsonify({'error': 'No autorizado'}), 403
-
         doc_service = DocumentService(os.getenv('AWS_BUCKET'))
         result = doc_service.get_pdf_url(user_id, filename)
 

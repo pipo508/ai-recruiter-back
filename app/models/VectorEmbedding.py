@@ -23,7 +23,7 @@ class VectorEmbedding(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=False)
     faiss_index_id = db.Column(db.BigInteger, nullable=False)  # ID del vector en FAISS
-    embedding_model = db.Column(db.String(100), default='text-embedding-3-small')
+    embedding_model = db.Column(db.String(100), default='text-embedding-3-large')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

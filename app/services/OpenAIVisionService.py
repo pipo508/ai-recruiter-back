@@ -2,7 +2,7 @@
 
 import os
 import base64
-import fitz  # PyMuPDF
+import fitz # PyMuPDF
 from PIL import Image, ImageEnhance
 import io
 import re

@@ -24,7 +24,7 @@ Ubicación:
 Habilidades clave:
 
 Candidato ideal:
-[Texto con máximo 30 palabras, basado en el perfil]
+[Texto con máximo 100 palabras, basado en el perfil]
 
 Experiencia Profesional:
 [Puesto]  
@@ -53,7 +53,7 @@ Convertí el siguiente texto reescrito del perfil de un candidato en un JSON con
   - `0` para números desconocidos
   - `[]` para listas vacías
   - `"Presente"` para "Año fin" si sigue vigente
-- El campo "Candidato ideal" **no debe exceder 30 palabras**.
+- El campo "Candidato ideal" **no debe exceder 100 palabras**.
 
 Estructura esperada:
 {
