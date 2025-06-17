@@ -50,17 +50,6 @@ def create_app(config_name=None):
     app.logger.info(f"[INFO] CORS configurado. Orígenes permitidos: {allowed_origins}.")
 
     # 🔍 Logging antes de cada request
-    @app.before_request
-    def log_request():
-        if request.path != '/favicon.ico':
-            headers = dict(request.headers)
-            auth_header = headers.get("Authorization", "No Authorization header")
-            app.logger.debug(f"[DEBUG] Request → {request.method} {request.url}")
-            app.logger.debug(f"[DEBUG] Headers: {headers}")
-            app.logger.debug(f"[DEBUG] Authorization: {auth_header}")
-            if request.method in ['POST', 'PUT', 'PATCH']:
-                app.logger.debug(f"[DEBUG] Body: {request.get_data(as_text=True)}")
-
     # 🧩 Logging después de cada response con errores
     @app.after_request
     def log_response(response):
