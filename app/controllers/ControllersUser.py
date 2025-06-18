@@ -58,7 +58,7 @@ def login():
             'user_id': user.id, 
             'username': user.username, 
             'email': user.email,
-            'exp': datetime.utcnow() + timedelta(hours=1)
+            'exp': datetime.utcnow() + timedelta(hours=10),  # Expira en 10 horas
         }
         current_app.logger.info(f"Payload creado: {payload}")
         

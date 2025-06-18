@@ -20,7 +20,9 @@ class SearchService:
         """
         Orquesta todo el proceso de búsqueda: embedding, FAISS, consulta a BD y guardado.
         """
-        embedding = self.openai_service.generate_embedding(query)
+        query_processed = self.openai_service.expandir_consulta_con_llm(query)
+        current_app.logger.info(f"Consulta procesada: {query_processed}")
+        embedding = self.openai_service.generate_embedding(query_processed)
         faiss_idx = get_faiss_index()
         if faiss_idx is None:
             raise Exception("Índice FAISS no disponible")

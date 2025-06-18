@@ -22,7 +22,6 @@ def search():
         # Este servicio se encarga de todo, incluyendo guardar el historial.
         search_service = SearchService()
         result_data = search_service.perform_search(query)
-        
         return jsonify(result_data), 200
 
     except Exception as e:
@@ -69,5 +68,14 @@ def delete_search_result(search_id):
     except ValueError as e:
         return jsonify({'error': str(e)}), 404
     except Exception as e:
-        current_app.logger.error(f"Error al eliminar resultado {search_id}: {e}")
-        return jsonify({'error': 'Error interno al eliminar resultado'}), 500
+        # --- CAMBIO CLAVE PARA DEPURACIÓN ---
+        # Registra el error completo para que puedas verlo en la consola del servidor.
+        current_app.logger.error(f"Excepción no controlada al eliminar {search_id}: {e}", exc_info=True)
+        
+        # Devuelve el mensaje de error real en la respuesta JSON para verlo en el navegador.
+        # ¡IMPORTANTE! Haz esto solo en un entorno de desarrollo, nunca en producción.
+        return jsonify({
+            'error': 'Error interno del servidor. Ver la consola del backend para detalles.',
+            'exception_type': type(e).__name__,
+            'exception_details': str(e)
+        }), 500

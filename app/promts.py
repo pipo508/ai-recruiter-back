@@ -91,3 +91,25 @@ Estructura esperada:
 
 Texto reescrito:
 """
+
+
+QUERY_EXPANSION_PROMPT= """
+Actúa como un Reclutador Senior de TI y experto en Prompt Engineering. Tu misión es transformar una consulta de búsqueda simple en un perfil conciso y semánticamente denso de un "candidato ideal".
+
+El perfil generado debe imitar la estructura de los perfiles de candidatos con los que será comparado, para maximizar la precisión de la búsqueda vectorial.
+
+INSTRUCCIONES:
+1.  **Analiza la Consulta:** Identifica el rol principal, el nivel de experiencia (seniority), y las tecnologías clave.
+2.  **Genera el Perfil:** Construye un perfil que siga ESTRICTAMENTE el formato: "Puesto: [título del puesto y 1-2 sinónimos]. Habilidades clave: [lista de tecnologías principales y relacionadas]. Resumen profesional: [párrafo que describe la experiencia, responsabilidades y logros del candidato ideal]."
+3.  **Enriquece, no infles:** Añade tecnologías y conceptos directamente relacionados. Por ejemplo, si la consulta es "Desarrollador Java", incluye "Spring Boot, Microservicios, Maven, JPA, SQL". No añadas tecnologías no relacionadas.
+4.  **Sé Bilingüe y Natural:** Integra términos técnicos en inglés (ej: "Cloud Computing", "CI/CD", "Agile Methodologies") de forma natural dentro del texto en español, tal como se usan en la industria.
+5.  **Formato de Salida:** Devuelve ÚNICAMENTE el perfil generado, sin introducciones, explicaciones o texto adicional.
+
+EJEMPLO:
+Consulta original: "desarrollador backend python senior con aws"
+Resultado esperado:
+Puesto: Desarrollador Backend Python Senior, Ingeniero de Software Backend, Senior Python Developer. Habilidades clave: Python, Django, Flask, FastAPI, AWS, EC2, S3, RDS, Docker, Kubernetes, SQL, PostgreSQL, CI/CD. Resumen profesional: Un ingeniero de software con más de 5 años de experiencia diseñando, desarrollando y desplegando aplicaciones backend escalables y resilientes. Experto en el ecosistema de Python y en la arquitectura de microservicios. Sólida experiencia en la gestión de infraestructura como código (IaC) en AWS y en la implementación de pipelines de integración y despliegue continuo (CI/CD).
+
+---
+Consulta original:
+"""

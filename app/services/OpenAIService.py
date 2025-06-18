@@ -3,7 +3,7 @@ import json
 import numpy as np
 from openai import OpenAI
 from flask import current_app
-from app.Promts  import REWRITE_PROMPT, STRUCTURE_PROMPT  # <-- importación nueva
+from app.Promts  import REWRITE_PROMPT, STRUCTURE_PROMPT , QUERY_EXPANSION_PROMPT  # <-- importación nueva
 
 class OpenAIRewriteService:
     def __init__(self):
@@ -72,3 +72,42 @@ class OpenAIRewriteService:
         except Exception as e:
             current_app.logger.error(f"Error al estructurar el perfil: {str(e)}")
             return {}
+
+
+    # Pega esta función dentro de la clase OpenAIRewriteService en tu archivo
+
+    def expandir_consulta_con_llm(self, query: str) -> str:
+        """
+        Expande una consulta de búsqueda utilizando un LLM para mejorar la búsqueda semántica.
+
+        Args:
+            query: La consulta original del usuario (ej: "dev python senior").
+
+        Returns:
+            La consulta expandida con sinónimos y términos relacionados, lista para generar un embedding.
+            En caso de error, devuelve la consulta original para no interrumpir el flujo.
+        """
+        try:
+            # Asegúrate de importar QUERY_EXPANSION_PROMPT junto a los otros prompts
+            # from app.Promts import REWRITE_PROMPT, STRUCTURE_PROMPT, QUERY_EXPANSION_PROMPT
+            prompt_completo = QUERY_EXPANSION_PROMPT + query
+
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "Eres un asistente experto en optimización de búsquedas para reclutamiento TI."},
+                    {"role": "user", "content": prompt_completo}
+                ],
+                max_tokens=150,  # Suficiente para una consulta expandida
+                temperature=0.4  # Un poco de creatividad pero manteniendo el foco
+            )
+            expanded_query = response.choices[0].message.content.strip()
+            # Fallback por si el modelo responde con texto extra (aunque el prompt lo evita)
+            if not expanded_query:
+                return query
+            return expanded_query
+
+        except Exception as e:
+            current_app.logger.error(f"Error al expandir la consulta con OpenAI: {str(e)}. Devolviendo la consulta original.")
+            # Devolvemos la consulta original como fallback para que la búsqueda pueda continuar
+            return query

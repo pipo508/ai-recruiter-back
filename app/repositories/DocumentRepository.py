@@ -186,3 +186,23 @@ class DocumentRepository(Create, Read, Update, Delete):
                 f"  [Causa] {str(e)}\n"
                 f"  [TRACEBACK]\n{error_details}"
             )
+    
+
+    def find_all_by_user_id(self, user_id: int):
+        """Encuentra todos los documentos de un usuario específico."""
+        return Document.query.filter_by(user_id=user_id).all()
+
+    def delete_all_by_user_id(self, user_id: int):
+        """Elimina todos los documentos de un usuario específico."""
+        try:
+            documents = Document.query.filter_by(user_id=user_id).all()
+            deleted_count = len(documents)
+            
+            for doc in documents:
+                db.session.delete(doc)
+            
+            db.session.commit()
+            return deleted_count
+        except Exception as e:
+            db.session.rollback()
+            raise e

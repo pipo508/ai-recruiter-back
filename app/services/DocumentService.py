@@ -30,7 +30,7 @@ class DocumentService:
     def process_pdf(self, file_path: str, user_id: int, filename: str, use_vision: bool = False) -> dict:
         """
         Orquesta el proceso completo de un PDF: validación, extracción, guardado,
-        generación de perfil, embedding y subida a S3.
+        generación de perfil, embedding enfocado y subida a S3.
         """
         try:
             current_app.logger.debug(f"[DEBUG] [Paso 1/7] Iniciando validación para el archivo '{filename}'.")
@@ -69,10 +69,25 @@ class DocumentService:
             current_app.logger.info(f"[INFO] Registro de documento creado con éxito. ID asignado: {saved_document.id}.")
 
             current_app.logger.debug(f"[DEBUG] [Paso 4/7] Generando perfil estructurado del candidato desde el texto.")
-            self.create_candidate_from_text(final_text, saved_document.id)
+            # MODIFICACIÓN: Capturamos el objeto 'candidate' que se crea.
+            candidate_profile = self.create_candidate_from_text(final_text, saved_document.id)
+            
+            # Si no se pudo crear un perfil, no podemos continuar con el embedding.
+            if not candidate_profile:
+                # Marcamos el documento como procesado pero con un error en el perfilado para revisión manual.
+                self.repo.update(saved_document, saved_document.id, {'status': 'processed_with_profile_error'})
+                raise Exception(f"No se pudo generar un perfil de candidato para el documento {saved_document.id}. No se puede crear el embedding.")
 
             current_app.logger.debug(f"[DEBUG] [Paso 5/7] Generando y almacenando el embedding vectorial.")
-            embedding_list = self.rewrite_service.generate_embedding(final_text)
+
+            # --- INICIO DE LA MODIFICACIÓN CLAVE ---
+            # 1. Creamos el texto optimizado para la búsqueda a partir del perfil.
+            search_document_text = self._create_search_document_for_candidate(candidate_profile)
+            
+            # 2. Generamos el embedding a partir de este nuevo texto enfocado.
+            embedding_list = self.rewrite_service.generate_embedding(search_document_text)
+            # --- FIN DE LA MODIFICACIÓN CLAVE ---
+
             self._save_embedding_to_faiss(saved_document.id, embedding_list)
 
             current_app.logger.debug(f"[DEBUG] [Paso 6/7] Subiendo archivo a S3 y actualizando el estado del documento.")
@@ -102,8 +117,12 @@ class DocumentService:
                 f"  [Causa] {str(e)}\n"
                 f"  [TRACEBACK]\n{error_details}"
             )
+            # Si ya se había creado el documento en la DB, lo marcamos como 'error'.
+            if 'saved_document' in locals() and saved_document.id:
+                self.repo.update(saved_document, saved_document.id, {'status': 'error'})
+
             self._clean_intermediate_files(os.path.basename(file_path))
-            return {'success': False, 'filename': filename, 'reason': f'Error interno del servidor: {e}', 'status': 500}
+            return {'success': False, 'filename': filename, 'reason': f'Error interno del servidor: {e}', 'status': 500}    
 
     def get_document_details(self, document_id: int, requesting_user_id: int) -> dict:
         document = self.repo.find_by_id_with_candidate(document_id)
@@ -131,7 +150,6 @@ class DocumentService:
         document = self.repo.find_by_id_with_candidate(document_id)
         if not document:
             return {'success': False, 'message': 'Documento no encontrado', 'status': 404}
-
 
         if not document.candidate:
             return {'success': False, 'message': 'No existe un perfil de candidato para este documento', 'status': 404}
@@ -182,6 +200,175 @@ class DocumentService:
                 f"  [TRACEBACK]\n{error_details}"
             )
             return {'success': False, 'message': f'Error interno del servidor: {e}', 'status': 500}
+    
+    def delete_all_user_documents(self, user_id: int) -> dict:
+        """
+        Elimina todos los documentos de un usuario específico incluyendo:
+        - Archivos en S3
+        - Registros en base de datos
+        - Índices vectoriales en FAISS
+        
+        Args:
+            user_id (int): ID del usuario
+            
+        Returns:
+            dict: Resultado de la operación con estadísticas
+        """
+        try:
+            # Obtener todos los documentos del usuario
+            user_documents = self.repo.find_all_by_user_id(user_id)
+            
+            if not user_documents:
+                current_app.logger.info(f"[INFO] No se encontraron documentos para el usuario {user_id}")
+                return {
+                    'success': True, 
+                    'message': 'No hay documentos para eliminar', 
+                    'status': 200,
+                    'deleted_count': 0
+                }
+
+            total_documents = len(user_documents)
+            document_ids = [doc.id for doc in user_documents]
+            s3_paths = [doc.storage_path for doc in user_documents if doc.storage_path]
+            
+            current_app.logger.info(
+                f"[INFO] Iniciando eliminación completa para usuario {user_id}. "
+                f"Documentos a eliminar: {total_documents}"
+            )
+
+            # Estadísticas para el resultado
+            failed_s3_deletions = 0
+            
+            # 1. Eliminar archivos de S3
+            if s3_paths:
+                current_app.logger.debug(f"[DEBUG] Eliminando {len(s3_paths)} archivos de S3")
+                failed_s3_deletions = self._delete_s3_files_batch(s3_paths, user_id)
+            
+            # 2. Eliminar índices FAISS
+            if document_ids:
+                self._remove_faiss_indices_batch(document_ids)
+            
+            # 3. Eliminar registros de base de datos (en transacción)
+            try:
+                self.repo.delete_all_by_user_id(user_id)
+                current_app.logger.info(
+                    f"[INFO] Eliminados {total_documents} registros de base de datos para usuario {user_id}"
+                )
+            except Exception as db_error:
+                current_app.logger.error(
+                    f"[ERROR] Error al eliminar registros de base de datos para usuario {user_id}: {str(db_error)}"
+                )
+                # Si falla la BD, es un error crítico
+                raise db_error
+
+            # Preparar mensaje de resultado
+            if failed_s3_deletions == 0:
+                message = f'Eliminación completa exitosa: {total_documents} documentos y todos sus datos asociados han sido eliminados'
+            else:
+                message = f'Eliminación mayormente exitosa: {total_documents} documentos eliminados de BD y FAISS, pero {failed_s3_deletions} archivos no pudieron eliminarse de S3'
+
+            current_app.logger.info(
+                f"[ÉXITO] Eliminación completa finalizada para usuario {user_id}. "
+                f"Documentos: {total_documents}, Fallos S3: {failed_s3_deletions}"
+            )
+
+            return {
+                'success': True,
+                'message': message,
+                'status': 200,
+                'deleted_count': total_documents,
+                'failed_s3_deletions': failed_s3_deletions
+            }
+
+        except Exception as e:
+            error_details = traceback.format_exc()
+            current_app.logger.error(
+                f"[ERROR] Error crítico en eliminación completa para usuario {user_id}.\n"
+                f"  [Causa] {str(e)}\n"
+                f"  [TRACEBACK]\n{error_details}"
+            )
+            return {
+                'success': False, 
+                'message': f'Error interno del servidor durante eliminación completa: {str(e)}', 
+                'status': 500
+            }
+
+    def _delete_s3_files_batch(self, s3_paths: list, user_id: int) -> int:
+        """
+        Elimina múltiples archivos de S3 en lote.
+        
+        Args:
+            s3_paths (list): Lista de rutas S3 a eliminar
+            user_id (int): ID del usuario (para logging)
+            
+        Returns:
+            int: Número de eliminaciones fallidas
+        """
+        failed_count = 0
+        
+        try:
+            # Si el servicio AWS soporta eliminación en lote, úsalo
+            if hasattr(self.aws_service, 'borrar_archivos_lote'):
+                failed_paths = self.aws_service.borrar_archivos_lote(s3_paths)
+                failed_count = len(failed_paths)
+                
+                if failed_count > 0:
+                    current_app.logger.warning(
+                        f"[ADVERTENCIA] {failed_count} archivos no pudieron eliminarse de S3 "
+                        f"para usuario {user_id}: {failed_paths[:5]}{'...' if len(failed_paths) > 5 else ''}"
+                    )
+            else:
+                # Eliminación individual como fallback
+                for s3_path in s3_paths:
+                    try:
+                        if not self.aws_service.borrar_archivo(s3_path):
+                            failed_count += 1
+                            current_app.logger.warning(
+                                f"[ADVERTENCIA] No se pudo eliminar archivo S3: {s3_path}"
+                            )
+                    except Exception as e:
+                        failed_count += 1
+                        current_app.logger.warning(
+                            f"[ADVERTENCIA] Error eliminando archivo S3 {s3_path}: {str(e)}"
+                        )
+                        
+        except Exception as e:
+            current_app.logger.error(
+                f"[ERROR] Error crítico eliminando archivos S3 para usuario {user_id}: {str(e)}"
+            )
+            failed_count = len(s3_paths)  # Asumimos que todos fallaron
+        
+        return failed_count
+
+    def _remove_faiss_indices_batch(self, document_ids: list):
+        """
+        Elimina múltiples índices FAISS en lote.
+        
+        Args:
+            document_ids (list): Lista de IDs de documentos
+        """
+        try:
+            faiss_idx = get_faiss_index()
+            if faiss_idx and document_ids:
+                # Convertir a numpy array como requiere FAISS
+                ids_array = np.array(document_ids, dtype=np.int64)
+                faiss_idx.remove_ids(ids_array)
+                save_faiss_index()
+                
+                current_app.logger.debug(
+                    f"[DEBUG] Eliminados {len(document_ids)} embeddings vectoriales del índice FAISS"
+                )
+            else:
+                current_app.logger.warning(
+                    "[ADVERTENCIA] Índice FAISS no disponible para eliminación de embeddings"
+                )
+                
+        except Exception as e:
+            current_app.logger.error(
+                f"[ERROR] Error eliminando índices FAISS: {str(e)}. "
+                f"IDs afectados: {document_ids[:10]}{'...' if len(document_ids) > 10 else ''}"
+            )
+            # No re-lanzamos la excepción porque FAISS no es crítico para la operación
             
     def get_pdf_url(self, user_id: int, filename: str) -> dict:
         document = self.repo.find_by_filename_and_user(filename, user_id)
@@ -249,3 +436,31 @@ class DocumentService:
             current_app.logger.debug(f"[DEBUG] Embedding vectorial para el documento {document_id} guardado en FAISS y su registro en la DB.")
         except Exception as e:
             current_app.logger.error(f"[ERROR] Fallo al guardar el embedding para el documento {document_id}. Causa: {e}.")
+
+    def _create_search_document_for_candidate(self, candidate: Candidate) -> str:
+        """
+        Crea una cadena de texto optimizada para la búsqueda semántica a partir de un perfil de candidato.
+        """
+        if not candidate:
+            return ""
+
+        # Concatenamos solo los campos más relevantes para una búsqueda de RRHH.
+        puesto = candidate.puesto_actual or "No especificado"
+        habilidad_principal = candidate.habilidad_principal or "No especificada"
+        
+        # Unimos las habilidades clave en una cadena legible.
+        habilidades_clave = ", ".join(candidate.habilidades_clave) if candidate.habilidades_clave else "No especificadas"
+        
+        # Usamos la descripción profesional que es rica en contexto.
+        descripcion = candidate.descripcion_profesional or ""
+
+        # Construimos el documento final para el embedding.
+        search_document = (
+            f"Puesto: {puesto}. "
+            f"Habilidad principal: {habilidad_principal}. "
+            f"Habilidades clave: {habilidades_clave}. "
+            f"Resumen profesional: {descripcion}"
+        )
+        
+        current_app.logger.debug(f"Documento de búsqueda creado para embedding (Doc ID: {candidate.document_id}): {search_document[:200]}...")
+        return search_document

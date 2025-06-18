@@ -241,7 +241,64 @@ def delete_file():
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
 
 
-# --- Endpoints adicionales (ejemplos) ---
+@bp.route('/delete-all', methods=['DELETE'])
+@require_auth
+def delete_all():
+    """
+    Elimina todos los documentos del usuario, sus archivos en S3 e índices FAISS.
+    Requiere confirmación explícita del usuario.
+    """
+    request_data = request.get_json() or {}
+    confirmation = request_data.get('confirmation')
+    user_id = request.user['user_id']
+    
+    current_app.logger.info(
+        f"[INFO] Solicitud de eliminación completa. Endpoint: DELETE /delete-all. "
+        f"User ID: {user_id}. Confirmación: {confirmation is not None}"
+    )
+    
+    try:
+        # Validar confirmación explícita
+        if not confirmation or confirmation != "DELETE_ALL_DOCUMENTS":
+            return jsonify({
+                'error': 'Confirmación requerida',
+                'message': 'Para eliminar todos los documentos, debe incluir "confirmation": "DELETE_ALL_DOCUMENTS" en el cuerpo de la solicitud'
+            }), 400
+
+        doc_service = DocumentService(os.getenv('AWS_BUCKET'))
+        result = doc_service.delete_all_user_documents(user_id)
+        
+        if result['success']:
+            current_app.logger.info(
+                f"[ÉXITO] Eliminación completa exitosa para el usuario {user_id}. "
+                f"Documentos eliminados: {result.get('deleted_count', 0)}. "
+                f"Mensaje: {result['message']}"
+            )
+        else:
+            current_app.logger.warning(
+                f"[ADVERTENCIA] Eliminación completa falló para el usuario {user_id}. "
+                f"Mensaje: {result['message']}"
+            )
+
+        return jsonify({
+            'success': result['success'], 
+            'message': result['message'],
+            'deleted_count': result.get('deleted_count', 0),
+            'failed_s3_deletions': result.get('failed_s3_deletions', 0)
+        }), result['status']
+    
+    except Exception as e:
+        error_details = traceback.format_exc()
+        current_app.logger.error(
+            f"[ERROR] Error fatal en el endpoint DELETE /delete-all.\n"
+            f"  [Usuario] {user_id}\n"
+            f"  [Causa] {str(e)}\n"
+            f"  [TRACEBACK]\n{error_details}"
+        )
+        return jsonify({
+            'error': 'Error interno del servidor', 
+            'details': str(e)
+        }), 500
 
 @bp.route('/list', methods=['GET'])
 @require_auth
