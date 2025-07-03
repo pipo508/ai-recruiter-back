@@ -73,7 +73,7 @@ def create_app(config_name: str | None = None):
         "http://127.0.0.1:5500", "http://localhost:3000",
         "http://localhost:5173", "http://127.0.0.1:5173",
         "http://localhost:8080", "http://3.138.181.127:5000",
-        "http://ai-recruiter",
+        "https://ai-recruiter-front.onrender.com",
 
     ]
     CORS(app, resources={r"/*": {
