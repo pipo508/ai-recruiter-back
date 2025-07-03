@@ -138,4 +138,3 @@ pyvenv.cfg
 .vs/
 ../.idea/
 //.vscode
-/migrations
