@@ -24,12 +24,26 @@ class Config:
     
     # --- Configuración de la base de datos ---
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    DB_USER = os.getenv('DB_USER')
-    DB_PASSWORD = os.getenv('DB_PASSWORD')
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_PORT = os.getenv('DB_PORT', '5432')
-    DB_NAME = os.getenv('DB_NAME')
-    SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+    # Primero, intenta obtener la URL de conexión completa de Render.
+    database_uri = os.getenv('DATABASE_URL')
+
+    # Si la URL de Render existe y empieza con "postgres://", la adaptamos para SQLAlchemy.
+    if database_uri and database_uri.startswith("postgres://"):
+        database_uri = database_uri.replace("postgres://", "postgresql://", 1)
+
+    # Si NO estamos en Render (es decir, no se encontró DATABASE_URL), 
+    # entonces construimos la URI con las variables locales de tu archivo .env.
+    if not database_uri:
+        DB_USER = os.getenv('DB_USER')
+        DB_PASSWORD = os.getenv('DB_PASSWORD')
+        DB_HOST = os.getenv('DB_HOST', 'localhost')
+        DB_PORT = os.getenv('DB_PORT', '5432')
+        DB_NAME = os.getenv('DB_NAME')
+        database_uri = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+    # Finalmente, asignamos la URI correcta (sea de Render o local) a la configuración.
+    SQLALCHEMY_DATABASE_URI = database_uri
     
     # --- Configuración de FAISS ---
     FAISS_INDEX_PATH = os.path.join(os.getcwd(), 'instance', 'main_faiss.index')
@@ -43,7 +57,7 @@ class Config:
     # --- Configuración de la Aplicación ---
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # Limita el tamaño de subida a 50MB
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-    ALLOWED_extensions = {'pdf'}
+    ALLOWED_EXTENSIONS = {'pdf'}
     MIN_TEXT_LENGTH = 100  # Mínimo número de caracteres para considerar válido un texto
 
 
@@ -58,12 +72,16 @@ class TestingConfig(Config):
     TESTING = True
     DEBUG = True
     DB_NAME = os.getenv('TEST_DB_NAME', 'test_db')
-    SQLALCHEMY_DATABASE_URI = f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{DB_NAME}"
+    
+    # Esta URI también debería usar la lógica flexible, pero para simplificar,
+    # la dejamos apuntando a una DB de prueba local.
+    SQLALCHEMY_DATABASE_URI = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{DB_NAME}"
     WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(Config):
     """Configuración para el entorno de producción."""
+    DEBUG = False
     SECRET_KEY = os.getenv('SECRET_KEY')
     if not SECRET_KEY:
         raise ValueError("La variable de entorno SECRET_KEY no está definida para producción.")
