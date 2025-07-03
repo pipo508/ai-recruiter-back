@@ -19,7 +19,7 @@ class Config:
     JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
     
     # --- Configuración General de Flask ---
-    DEBUG = False
+    DEBUG = True
     TESTING = False
     
     # --- Configuración de la base de datos ---
@@ -43,14 +43,14 @@ class Config:
     # --- Configuración de la Aplicación ---
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # Limita el tamaño de subida a 50MB
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-    ALLOWED_EXTENSIONS = {'pdf'}
+    ALLOWED_extensions = {'pdf'}
     MIN_TEXT_LENGTH = 100  # Mínimo número de caracteres para considerar válido un texto
 
 
 class DevelopmentConfig(Config):
     """Configuración para el entorno de desarrollo."""
     DEBUG = True
-    SQLALCHEMY_ECHO = True  # Muestra queries SQL en la consola
+    SQLALCHEMY_ECHO = False  # Muestra queries SQL en la consola
 
 
 class TestingConfig(Config):

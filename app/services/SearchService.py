@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.services.OpenAIService import OpenAIRewriteService
 from app.services.SearchHistoryService import SearchHistoryService # Importa el servicio renombrado
-from app.Extensions import get_faiss_index
+from app.extensions import get_faiss_index
 from app.models.Candidate import Candidate 
 
 class SearchService:
@@ -84,3 +84,5 @@ class SearchService:
         except Exception as e:
             current_app.logger.error(f"Error al guardar resultados en archivo: {e}")
             return None
+        
+    

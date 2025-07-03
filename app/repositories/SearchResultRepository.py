@@ -4,7 +4,7 @@ Encapsula las operaciones de base de datos relacionadas con el modelo SearchResu
 Versión actualizada a la sintaxis moderna de SQLAlchemy 2.0.
 """
 
-from app.Extensions import db
+from app.extensions import db
 from app.models.Result import SearchResult
 from app.repositories.RepositoryBase import Create, Read
 from sqlalchemy import desc, func

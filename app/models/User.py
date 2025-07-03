@@ -5,7 +5,7 @@ Define la estructura y relaciones de los usuarios en la base de datos.
 
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.Extensions import db
+from app.extensions import db
 
 class User(db.Model):
     __tablename__ = 'users'

@@ -1,6 +1,6 @@
 # app/models/models_candidate.py
 
-from app.Extensions import db
+from app.extensions import db
 from datetime import datetime
 
 class Candidate(db.Model):

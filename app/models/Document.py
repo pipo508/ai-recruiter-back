@@ -4,7 +4,7 @@ y procesados en el sistema.
 """
 
 from datetime import datetime
-from app.Extensions import db
+from app.extensions import db
 
 class Document(db.Model):
     """

@@ -1,6 +1,6 @@
 # app/repositories/user_repository.py
 
-from app.Extensions import db
+from app.extensions import db
 from app.models import User
 from app.repositories.RepositoryBase import Create, Read, Update, Delete
 from sqlalchemy.exc import IntegrityError

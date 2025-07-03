@@ -3,24 +3,16 @@
 from flask import Blueprint, jsonify, request, current_app
 from app.services.UserService import UserService
 import jwt
-import os
 from datetime import datetime, timedelta
-from app.Middleware import require_auth
+from app.middleware import require_auth
 import traceback
 
 bp = Blueprint('user', __name__)
 
-# Configuración usando variables de entorno
-SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key-for-development')
-JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
-
-# Validar que la SECRET_KEY esté configurada en producción
-if not os.getenv('SECRET_KEY') and os.getenv('FLASK_ENV') == 'production':
-    raise ValueError("SECRET_KEY debe estar configurada en producción")
-
 # Los endpoints de register y login ya estaban bien estructurados y se mantienen igual.
 @bp.route('/register', methods=['POST'])
 def register():
+    
     data = request.get_json()
     if not data or not all(k in data for k in ('username', 'email', 'password')):
         return jsonify({'error': 'Datos incompletos'}), 400
@@ -63,10 +55,14 @@ def login():
         current_app.logger.info(f"Payload creado: {payload}")
         
         current_app.logger.info("Generando token JWT...")
-        current_app.logger.info(f"SECRET_KEY configurada: {'Sí' if SECRET_KEY else 'No'}")
-        current_app.logger.info(f"JWT_ALGORITHM: {JWT_ALGORITHM}")
+        # Usar current_app.config en lugar de variables globales
+        secret_key = current_app.config['SECRET_KEY']
+        jwt_algorithm = current_app.config.get('JWT_ALGORITHM', 'HS256')
         
-        token = jwt.encode(payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
+        current_app.logger.info(f"SECRET_KEY configurada: {'Sí' if secret_key else 'No'}")
+        current_app.logger.info(f"JWT_ALGORITHM: {jwt_algorithm}")
+        
+        token = jwt.encode(payload, secret_key, algorithm=jwt_algorithm)
         current_app.logger.info(f"Token generado exitosamente: {type(token)}")
         
         return jsonify({

@@ -1,5 +1,5 @@
 from datetime import datetime
-from app.Extensions import db
+from app.extensions import db
 
 class SearchResult(db.Model):
     """

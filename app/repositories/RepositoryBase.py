@@ -3,7 +3,7 @@ Definición de interfaces abstractas para los repositorios.
 Proporciona las operaciones CRUD base que los repositorios específicos deben implementar.
 """
 
-from app.Extensions import db
+from app.extensions import db
 from abc import ABC, abstractmethod
 
 class Create(ABC):

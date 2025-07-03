@@ -1,27 +1,33 @@
-# app/controllers/controllers_search.py
-
-from flask import Blueprint, request, jsonify, current_app
-# Se importan los dos servicios con sus nombres correctos
 from app.services.SearchService import SearchService
+from app.services.HybridSearchService import HybridSearchService  # NUEVA IMPORTACIÓN
 from app.services.SearchHistoryService import SearchHistoryService
-
+import json
+from flask import Blueprint, request, jsonify, current_app
 bp = Blueprint('search', __name__)
 
+# Modificar el endpoint de búsqueda
 @bp.route('/', methods=['POST'], strict_slashes=False)
 def search():
     """
-    Endpoint de búsqueda. Delega toda la lógica al SearchService.
+    Endpoint de búsqueda híbrida
     """
     try:
         data = request.get_json() or {}
         query = data.get('query')
+        use_hybrid = data.get('hybrid', True)  # Por defecto usar híbrido
+        
         if not query:
             return jsonify({'error': 'Se requiere un texto de consulta en el campo "query"'}), 400
 
-        # El controlador solo llama a un método del nuevo servicio.
-        # Este servicio se encarga de todo, incluyendo guardar el historial.
-        search_service = SearchService()
-        result_data = search_service.perform_search(query)
+        if use_hybrid:
+            # Usar búsqueda híbrida
+            search_service = HybridSearchService()
+            result_data = search_service.perform_hybrid_search(query)
+        else:
+            # Usar búsqueda semántica tradicional
+            search_service = SearchService()
+            result_data = search_service.perform_search(query)
+            
         return jsonify(result_data), 200
 
     except Exception as e:

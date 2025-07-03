@@ -1,91 +1,137 @@
 from flask import Blueprint, jsonify, request, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.services.DocumentService import DocumentService
-from app.Middleware import require_auth
+from app.middleware import require_auth
 import os
 import traceback
+
 
 bp = Blueprint('document', __name__, static_folder='static')
 UPLOAD_FOLDER = 'Uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-
 @bp.route('/process-pdfs', methods=['POST'])
 @require_auth
 def process_pdfs():
-    user_id_form = request.form.get('user_id')
-    current_app.logger.info(f"[INFO] Inicio de procesamiento de archivos. Endpoint: POST /process-pdfs. User ID: {user_id_form}.")
+    """Procesa PDFs y emite logs claros sin ruido externo."""
     
+    # LOGS INMEDIATOS PARA DEBUGGING
+    print("🔥 INICIO DEL ENDPOINT process_pdfs", flush=True)
+    current_app.logger.critical("🔥 INICIO DEL ENDPOINT process_pdfs")
+    
+    user_id_form = request.form.get("user_id")
+    ai_plus_enabled = request.form.get("ai_enabled", "false").lower() == "true"
+    
+    # Logs con print Y logger para asegurar visibilidad
+    print(f"📋 DATOS RECIBIDOS - user_id: {user_id_form}, ai_plus: {ai_plus_enabled}", flush=True)
+    current_app.logger.critical(f"📋 DATOS RECIBIDOS - user_id: {user_id_form}, ai_plus: {ai_plus_enabled}")
+    
+    current_app.logger.info(f"[INFO] Inicio de procesamiento de archivos. Endpoint: POST /process-pdfs. User ID: {user_id_form}.")
+    current_app.logger.info(f"[INFO] Inicio. user_id={user_id_form}, ai_plus={ai_plus_enabled}")
+
     try:
-        if 'files[]' not in request.files:
-            current_app.logger.warning("[ADVERTENCIA] La solicitud a POST /process-pdfs no contenía archivos. Se requiere el campo 'files[]'.")
-            return jsonify({'error': 'No se encontraron archivos en la solicitud'}), 400
-        
+        # Validación de archivos
+        if "files[]" not in request.files or not request.files.getlist("files[]"):
+            print("❌ ERROR: No se encontraron archivos en la request", flush=True)
+            current_app.logger.warning("[WARN] La solicitud no contenía archivos.")
+            return jsonify(error="No se encontraron archivos"), 400
+
         if not user_id_form:
-            current_app.logger.warning("[ADVERTENCIA] Solicitud a POST /process-pdfs sin 'user_id'.")
-            return jsonify({'error': 'El campo user_id es requerido'}), 400
-        
+            print("❌ ERROR: Falta user_id", flush=True)
+            current_app.logger.warning("[WARN] Falta user_id.")
+            return jsonify(error="user_id requerido"), 400
+
         user_id = int(user_id_form)
-        if user_id != request.user['user_id']:
-            current_app.logger.error(f"[ERROR] Conflicto de autorización en POST /process-pdfs. ID de token: {request.user['user_id']}, ID de formulario: {user_id}.")
-            return jsonify({'error': 'No autorizado: el user_id del formulario no coincide con el del token'}), 403
+        if user_id != request.user["user_id"]:
+            print(f"❌ ERROR: user_id no coincide. Token: {request.user['user_id']}, Form: {user_id}", flush=True)
+            current_app.logger.error("[ERROR] user_id del token ≠ formulario")
+            return jsonify(error="No autorizado"), 403
 
-        files = request.files.getlist('files[]')
-        doc_service = DocumentService(os.getenv('AWS_BUCKET'))
-        processed_documents, failed_documents, needs_vision_documents = [], [], []
-
-        for file in files:
-            if file.filename == '':
-                continue
-            
-            filename = secure_filename(file.filename)
-            try:
-                temp_path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(temp_path)
-
-                # MODIFICACIÓN: Cambiado de .info a .debug para logs repetitivos
-                current_app.logger.debug(f"[DEBUG] Procesando archivo individual: '{filename}'.")
-                result = doc_service.process_pdf(temp_path, user_id, filename, use_vision=False)
-
-                if result['success']:
-                    processed_documents.append(result['document'])
-                elif result.get('needs_vision', False):
-                    needs_vision_documents.append({'filename': filename, 'reason': result['reason'], 'temp_path_id': os.path.basename(temp_path)})
-                else:
-                    failed_documents.append({'filename': result['filename'], 'reason': result['reason']})
-            
-            except Exception as e:
-                error_details = traceback.format_exc()
-                current_app.logger.error(
-                    f"[ERROR] Falla crítica durante el procesamiento del archivo '{filename}'.\n"
-                    f"  [Causa] {str(e)}\n"
-                    f"  [Sugerencia] El archivo se marcará como 'fallido'. Revisar el traceback para detalles.\n"
-                    f"  [TRACEBACK]\n{error_details}"
-                )
-                failed_documents.append({'filename': filename, 'reason': str(e)})
-
-        response_summary = f"Procesados: {len(processed_documents)}, Requieren Visión: {len(needs_vision_documents)}, Fallidos: {len(failed_documents)}"
-        current_app.logger.info(f"[ÉXITO] Finaliza el procesamiento de archivos para POST /process-pdfs. Resumen: {response_summary}.")
+        files = request.files.getlist("files[]")
+        print(f"📁 ARCHIVOS DETECTADOS: {len(files)}", flush=True)
+        current_app.logger.critical(f"📁 ARCHIVOS DETECTADOS: {len(files)}")
         
-        response = {
-            'message': response_summary,
-            'processed': processed_documents,
-            'needs_vision': needs_vision_documents,
-            'failed': failed_documents
+        # Mostrar nombres de archivos
+        for i, f in enumerate(files):
+            print(f"  📄 Archivo {i+1}: {f.filename}", flush=True)
+            current_app.logger.critical(f"  📄 Archivo {i+1}: {f.filename}")
+
+        doc_service = DocumentService(os.getenv("AWS_BUCKET"))
+        processed, failed, needs_vision = [], [], []
+
+        current_app.logger.info(f"[INFO] Procesando {len(files)} archivo(s)…")
+
+        for i, f in enumerate(files):
+            if f.filename == "":
+                print(f"⚠️  Archivo {i+1}: filename vacío, saltando", flush=True)
+                continue
+                
+            filename = secure_filename(f.filename)
+            print(f"🔄 PROCESANDO Archivo {i+1}/{len(files)}: '{filename}'", flush=True)
+            current_app.logger.critical(f"🔄 PROCESANDO Archivo {i+1}/{len(files)}: '{filename}'")
+
+            try:
+                path = os.path.join(UPLOAD_FOLDER, filename)
+                print(f"💾 Guardando archivo en: {path}", flush=True)
+                
+                f.save(path)
+                current_app.logger.critical(f"[P2] Llamando a DocumentService para '{filename}'")
+                
+                print(f"🤖 Llamando a DocumentService.process_pdf()", flush=True)
+                res = doc_service.process_pdf(
+                    path, user_id, filename,
+                    use_vision=False, ai_plus_enabled=ai_plus_enabled
+                )
+
+                if res.get("success"):
+                    print(f"✅ ÉXITO: {filename} procesado correctamente", flush=True)
+                    processed.append(res["document"])
+                elif res.get("needs_vision"):
+                    print(f"👁️  VISION REQUERIDA: {filename}", flush=True)
+                    needs_vision.append({
+                        "filename": filename,
+                        "reason": res["reason"],
+                        "temp_path_id": os.path.basename(path),
+                    })
+                else:
+                    print(f"❌ FALLÓ: {filename} - {res.get('reason', 'Error desconocido')}", flush=True)
+                    failed.append({
+                        "filename": res.get("filename", filename),
+                        "reason": res.get("reason", "Error desconocido"),
+                    })
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                print(f"💥 EXCEPCIÓN en '{filename}': {e}", flush=True)
+                current_app.logger.error(f"[ERROR] Falla '{filename}': {e}\n{tb}")
+                failed.append({"filename": filename, "reason": str(e)})
+
+        summary = f"OK: {len(processed)}, Visión: {len(needs_vision)}, Fallidos: {len(failed)}"
+        print(f"📊 RESUMEN FINAL: {summary}", flush=True)
+        current_app.logger.info(f"[FIN] {summary}")
+
+        resp = {
+            "message": summary,
+            "processed": processed,
+            "needs_vision": needs_vision,
+            "failed": failed,
         }
-        return jsonify(response), 200
+
+        if not processed and not failed and needs_vision:
+            print("🔄 Devolviendo 202 - Requiere Vision", flush=True)
+            return jsonify(resp), 202  # requiere acción Vision
+
+        print("✅ Devolviendo 200 - Proceso completado", flush=True)
+        return jsonify(resp), 200
 
     except Exception as e:
-        error_details = traceback.format_exc()
-        current_app.logger.error(
-            f"[ERROR] Error fatal en el endpoint POST /process-pdfs. La operación fue interrumpida.\n"
-            f"  [Causa] {str(e)}\n"
-            f"  [TRACEBACK]\n{error_details}"
-        )
-        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+        tb = traceback.format_exc()
+        print(f"💥 ERROR FATAL en /process-pdfs: {e}", flush=True)
+        current_app.logger.error(f"[FATAL] /process-pdfs: {e}\n{tb}")
+        return jsonify(error="Error interno", details=str(e)), 500
+    
 
-
-
+    
 @bp.route('/process-with-vision', methods=['POST'])
 @require_auth
 def process_with_vision():

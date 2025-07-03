@@ -28,6 +28,7 @@ class UserService:
         return self.repository.create(user)
 
     def login(self, username: str, password: str) -> User:
+        current_app.logger.debug(f"Intentando login para usuario: {username}  123")
         # La lógica de login también es correcta.
         if not username or not password:
             raise ValueError("Se requiere nombre de usuario y contraseña")

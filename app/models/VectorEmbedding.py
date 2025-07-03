@@ -4,7 +4,7 @@ con documentos en la base de datos.
 """
 
 from datetime import datetime
-from app.Extensions import db
+from app.extensions import db
 
 class VectorEmbedding(db.Model):
     """

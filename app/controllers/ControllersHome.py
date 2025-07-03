@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, current_app
-from app.Extensions import db  # Corregido
+from app.extensions import db  # Corregido
+from sqlalchemy import text # <-- AÑADIR ESTA IMPORTACIÓN
 
 # Crear blueprint para las rutas de home
 bp = Blueprint('home', __name__)
@@ -31,7 +32,7 @@ def health():
     # Comprobar conexión a base de datos
     db_status = "ok"
     try:
-        db.session.execute("SELECT 1")
+        db.session.execute(text("SELECT 1"))
     except Exception as e:
         db_status = f"error: {str(e)}"
     
@@ -39,7 +40,7 @@ def health():
     firebase_status = "not configured"
     if current_app.config.get('FIREBASE_CREDENTIALS_PATH'):
         try:
-            from app.Extensions import get_firebase_bucket  # Corregido
+            from app.extensions import get_firebase_bucket  # Corregido
             bucket = get_firebase_bucket()
             if bucket:
                 firebase_status = "ok"
@@ -55,6 +56,7 @@ def health():
     
     return jsonify({
         'status': 'healthy',
+        'version': 'logs-1-julio', # <-- ¡Nuestra marca inconfundible!
         'services': {
             'database': db_status,
             'firebase': firebase_status,

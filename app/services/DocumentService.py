@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import current_app
 import PyPDF2
 import numpy as np
-from app.Extensions import db, get_faiss_index, save_faiss_index
+from app.extensions import db, get_faiss_index, save_faiss_index
 from app.models.Document import Document
 from app.models.VectorEmbedding import VectorEmbedding
 from app.repositories.DocumentRepository import DocumentRepository
@@ -24,76 +24,114 @@ class DocumentService:
         self.vision_service = OpenAIVisionService()
         self.aws_service = AWSService()
         self.aws_bucket = aws_bucket
-        self.MIN_TEXT_LENGTH = 500
+        self.MIN_TEXT_LENGTH = 100
         self.MIN_VISION_TEXT_LENGTH = 400
 
-    def process_pdf(self, file_path: str, user_id: int, filename: str, use_vision: bool = False) -> dict:
+    def process_pdf(self, file_path: str, user_id: int, filename: str, use_vision: bool = False, ai_plus_enabled: bool = False) -> dict:
         """
         Orquesta el proceso completo de un PDF: validación, extracción, guardado,
         generación de perfil, embedding enfocado y subida a S3.
         """
         try:
-            current_app.logger.debug(f"[DEBUG] [Paso 1/7] Iniciando validación para el archivo '{filename}'.")
+            # LOGS CRÍTICOS PARA DEBUGGING - Misma estrategia que el controlador
+            print(f"🔥 [SERVICIO] Entrando en process_pdf para '{filename}'", flush=True)
+            current_app.logger.critical(f"🔥 [SERVICIO] Entrando en process_pdf para '{filename}'. ai_plus_enabled={ai_plus_enabled}, use_vision={use_vision}")
+            
+            print(f"📋 [SERVICIO] [Paso 1/7] Iniciando validación para '{filename}'", flush=True)
+            current_app.logger.critical(f"📋 [SERVICIO] [Paso 1/7] Iniciando validación para '{filename}'")
+            
             if not use_vision:
                 existing_document = self.repo.find_by_filename_and_user(filename, user_id)
                 if existing_document:
-                    current_app.logger.warning(f"[ADVERTENCIA] Proceso cancelado para '{filename}'. Razón: El documento ya existe para este usuario (user_id: {user_id}).")
+                    print(f"⚠️  [SERVICIO] El documento '{filename}' ya existe. Finalizando.", flush=True)
+                    current_app.logger.critical(f"⚠️  [SERVICIO] El documento '{filename}' ya existe. Finalizando.")
                     return {'success': False, 'filename': filename, 'reason': 'El documento ya existe.', 'status': 409}
 
             if not self._is_valid_pdf(file_path):
-                current_app.logger.error(f"[ERROR] Proceso cancelado para '{filename}'. Razón: El archivo no es un PDF válido o está corrupto.")
+                print(f"❌ [SERVICIO] El archivo '{filename}' no es un PDF válido. Finalizando.", flush=True)
+                current_app.logger.critical(f"❌ [SERVICIO] El archivo '{filename}' no es un PDF válido. Finalizando.")
                 return {'success': False, 'filename': filename, 'reason': 'No es un PDF válido o está dañado.', 'status': 400}
 
             extraction_method = "Vision/OCR" if use_vision else "PyPDF2"
-            current_app.logger.debug(f"[DEBUG] [Paso 2/7] Extrayendo texto usando el método: {extraction_method}.")
+            print(f"🔄 [SERVICIO] [Paso 2/7] Extrayendo texto con {extraction_method} para '{filename}'", flush=True)
+            current_app.logger.critical(f"🔄 [SERVICIO] [Paso 2/7] Extrayendo texto con {extraction_method} para '{filename}'")
+            
             extracted_text = self.vision_service.extract_text_from_pdf_with_vision(file_path) if use_vision else self._extract_text_pypdf2(file_path)
             
+            # --- LOG DE DEPURACIÓN CLAVE ---
+            text_length = len(extracted_text.strip())
+            print(f"📏 [SERVICIO] Longitud del texto extraído para '{filename}': {text_length} caracteres", flush=True)
+            current_app.logger.critical(f"📏 [SERVICIO] Longitud del texto extraído para '{filename}': {text_length} caracteres")
+            # --- FIN DEL LOG DE DEPURACIÓN CLAVE ---
+            
             min_length = self.MIN_VISION_TEXT_LENGTH if use_vision else self.MIN_TEXT_LENGTH
-            if not extracted_text or len(extracted_text.strip()) < min_length:
-                reason = f'Texto extraído con {extraction_method} es insuficiente (largo: {len(extracted_text.strip())}, mínimo: {min_length}).'
-                current_app.logger.warning(f"[ADVERTENCIA] Proceso cancelado para '{filename}'. Razón: {reason}")
+            if not extracted_text or text_length < min_length:
+                reason = f'Texto extraído con {extraction_method} es insuficiente (largo: {text_length}, mínimo: {min_length}).'
+                print(f"⚠️  [SERVICIO] {reason}", flush=True)
+                current_app.logger.critical(f"⚠️  [SERVICIO] {reason}")
+                
                 if not use_vision:
+                    print(f"👁️  [SERVICIO] Texto insuficiente para '{filename}'. Desviando a flujo 'needs_vision'", flush=True)
+                    current_app.logger.critical(f"👁️  [SERVICIO] Texto insuficiente para '{filename}'. Desviando a flujo 'needs_vision'")
                     return {'success': False, 'filename': filename, 'reason': 'Texto insuficiente, se recomienda usar OCR/Vision.', 'needs_vision': True, 'status': 200}
                 else:
+                    print(f"❌ [SERVICIO] Texto insuficiente incluso con Vision para '{filename}'. Finalizando con error 400.", flush=True)
+                    current_app.logger.critical(f"❌ [SERVICIO] Texto insuficiente incluso con Vision para '{filename}'. Finalizando con error 400.")
                     return {'success': False, 'filename': filename, 'reason': reason, 'status': 400}
             
-            final_text = self.rewrite_service.rewrite_text(extracted_text)
+            print(f"✅ [SERVICIO] Texto SUFICIENTE para '{filename}'. Continuando con procesamiento normal.", flush=True)
+            current_app.logger.critical(f"✅ [SERVICIO] Texto SUFICIENTE para '{filename}'. Continuando con procesamiento normal.")
+            
+            print(f"🤖 [SERVICIO] Enviando texto a reescritura AI para '{filename}'", flush=True)
+            current_app.logger.critical(f"🤖 [SERVICIO] Enviando texto a reescritura AI para '{filename}'")
+            final_text = self.rewrite_service.rewrite_text(extracted_text, ai_plus_enabled=ai_plus_enabled)
 
-            current_app.logger.debug(f"[DEBUG] [Paso 3/7] Creando registro del documento en la base de datos.")
+            print(f"💾 [SERVICIO] [Paso 3/7] Creando registro del documento '{filename}' en la base de datos", flush=True)
+            current_app.logger.critical(f"💾 [SERVICIO] [Paso 3/7] Creando registro del documento '{filename}' en la base de datos")
+            
             document = Document(
                 user_id=user_id, filename=filename, storage_path="pending",
                 rewritten_text=final_text, status='processing', char_count=len(final_text),
                 ocr_processed=use_vision
             )
             saved_document = self.repo.create(document)
-            current_app.logger.info(f"[INFO] Registro de documento creado con éxito. ID asignado: {saved_document.id}.")
-
-            current_app.logger.debug(f"[DEBUG] [Paso 4/7] Generando perfil estructurado del candidato desde el texto.")
-            # MODIFICACIÓN: Capturamos el objeto 'candidate' que se crea.
-            candidate_profile = self.create_candidate_from_text(final_text, saved_document.id)
             
-            # Si no se pudo crear un perfil, no podemos continuar con el embedding.
+            print(f"✅ [SERVICIO] Registro creado con éxito. ID asignado: {saved_document.id} para '{filename}'", flush=True)
+            current_app.logger.critical(f"✅ [SERVICIO] Registro creado con éxito. ID asignado: {saved_document.id} para '{filename}'")
+
+            print(f"👤 [SERVICIO] [Paso 4/7] Generando perfil estructurado del candidato para '{filename}'", flush=True)
+            current_app.logger.critical(f"👤 [SERVICIO] [Paso 4/7] Generando perfil estructurado del candidato para '{filename}'")
+            
+            candidate_profile = self.create_candidate_from_text(final_text, saved_document.id, ai_plus_enabled=ai_plus_enabled)
+            
             if not candidate_profile:
-                # Marcamos el documento como procesado pero con un error en el perfilado para revisión manual.
+                print(f"❌ [SERVICIO] No se pudo generar perfil para '{filename}' (Doc ID: {saved_document.id})", flush=True)
+                current_app.logger.critical(f"❌ [SERVICIO] No se pudo generar perfil para '{filename}' (Doc ID: {saved_document.id})")
                 self.repo.update(saved_document, saved_document.id, {'status': 'processed_with_profile_error'})
                 raise Exception(f"No se pudo generar un perfil de candidato para el documento {saved_document.id}. No se puede crear el embedding.")
 
-            current_app.logger.debug(f"[DEBUG] [Paso 5/7] Generando y almacenando el embedding vectorial.")
-
-            # --- INICIO DE LA MODIFICACIÓN CLAVE ---
-            # 1. Creamos el texto optimizado para la búsqueda a partir del perfil.
+            print(f"🎯 [SERVICIO] [Paso 5/7] Generando embedding vectorial para '{filename}'", flush=True)
+            current_app.logger.critical(f"🎯 [SERVICIO] [Paso 5/7] Generando embedding vectorial para '{filename}'")
+            
             search_document_text = self._create_search_document_for_candidate(candidate_profile)
             
-            # 2. Generamos el embedding a partir de este nuevo texto enfocado.
+            print(f"🔍 [SERVICIO] Documento de búsqueda creado (primeros 100 chars): {search_document_text[:100]}...", flush=True)
+            current_app.logger.critical(f"🔍 [SERVICIO] Documento de búsqueda creado para '{filename}' (len: {len(search_document_text)})")
+            
             embedding_list = self.rewrite_service.generate_embedding(search_document_text)
-            # --- FIN DE LA MODIFICACIÓN CLAVE ---
-
             self._save_embedding_to_faiss(saved_document.id, embedding_list)
 
-            current_app.logger.debug(f"[DEBUG] [Paso 6/7] Subiendo archivo a S3 y actualizando el estado del documento.")
+            print(f"☁️  [SERVICIO] [Paso 6/7] Subiendo '{filename}' a S3", flush=True)
+            current_app.logger.critical(f"☁️  [SERVICIO] [Paso 6/7] Subiendo '{filename}' a S3")
+            
             file_url, final_s3_filename = self.aws_service.subir_pdf(file_path, filename)
             if file_url is None:
+                print(f"❌ [SERVICIO] Fallo en subida a S3 para '{filename}'", flush=True)
+                current_app.logger.critical(f"❌ [SERVICIO] Fallo en subida a S3 para '{filename}'")
                 raise Exception("Fallo en la subida del archivo a S3. El servicio AWS no retornó una URL.")
+            
+            print(f"✅ [SERVICIO] Archivo subido a S3: {final_s3_filename}", flush=True)
+            current_app.logger.critical(f"✅ [SERVICIO] Archivo subido a S3: {final_s3_filename}")
             
             update_data = {
                 'storage_path': f"curriculums/{final_s3_filename}",
@@ -103,26 +141,29 @@ class DocumentService:
             }
             updated_document = self.repo.update(saved_document, saved_document.id, update_data)
 
-            current_app.logger.debug(f"[DEBUG] [Paso 7/7] Realizando limpieza de archivos temporales.")
+            print(f"🧹 [SERVICIO] [Paso 7/7] Limpiando archivos temporales para '{filename}'", flush=True)
+            current_app.logger.critical(f"🧹 [SERVICIO] [Paso 7/7] Limpiando archivos temporales para '{filename}'")
+            
             self._clean_intermediate_files(os.path.basename(file_path))
             
-            current_app.logger.info(f"[ÉXITO] Proceso completado satisfactoriamente para el archivo '{filename}'. Documento ID: {updated_document.id}.")
+            print(f"🎉 [SERVICIO] PROCESO COMPLETADO EXITOSAMENTE para '{filename}' (Doc ID: {updated_document.id})", flush=True)
+            current_app.logger.critical(f"🎉 [SERVICIO] PROCESO COMPLETADO EXITOSAMENTE para '{filename}' (Doc ID: {updated_document.id})")
+            
             return {'success': True, 'status': 200, 'document': updated_document.to_dict()}
 
         except Exception as e:
             db.session.rollback()
             error_details = traceback.format_exc()
-            current_app.logger.error(
-                f"[ERROR] Error crítico durante el procesamiento del archivo '{filename}'. La operación ha sido revertida.\n"
-                f"  [Causa] {str(e)}\n"
-                f"  [TRACEBACK]\n{error_details}"
-            )
-            # Si ya se había creado el documento en la DB, lo marcamos como 'error'.
+            
+            print(f"💥 [SERVICIO] ERROR CRÍTICO en '{filename}': {str(e)}", flush=True)
+            current_app.logger.critical(f"💥 [SERVICIO] ERROR CRÍTICO en '{filename}': {str(e)}")
+            current_app.logger.critical(f"💥 [SERVICIO] TRACEBACK para '{filename}':\n{error_details}")
+            
             if 'saved_document' in locals() and saved_document.id:
                 self.repo.update(saved_document, saved_document.id, {'status': 'error'})
 
             self._clean_intermediate_files(os.path.basename(file_path))
-            return {'success': False, 'filename': filename, 'reason': f'Error interno del servidor: {e}', 'status': 500}    
+            return {'success': False, 'filename': filename, 'reason': f'Error interno del servidor: {e}', 'status': 500} 
 
     def get_document_details(self, document_id: int, requesting_user_id: int) -> dict:
         document = self.repo.find_by_id_with_candidate(document_id)
@@ -380,8 +421,8 @@ class DocumentService:
     def get_all_documents(self):
         return self.repo.find_all()
 
-    def create_candidate_from_text(self, text: str, document_id: int) -> Candidate | None:
-        profile_data = self.rewrite_service.structure_profile(text)
+    def create_candidate_from_text(self, text: str, document_id: int, ai_plus_enabled: bool = False) -> Candidate | None:
+        profile_data = self.rewrite_service.structure_profile(text, ai_plus_enabled=ai_plus_enabled)
         if not profile_data or "Nombre completo" not in profile_data:
             current_app.logger.error(f"[ERROR] No se pudo crear el candidato para el documento {document_id}. Razón: Los datos estructurados por la IA fueron insuficientes o no contenían un 'Nombre completo'.")
             return None

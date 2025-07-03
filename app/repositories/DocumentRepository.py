@@ -1,6 +1,6 @@
 # app/repositories/document_repository.py
 
-from app.Extensions import db
+from app.extensions import db
 from app.models.Candidate import Candidate
 from app.models.VectorEmbedding import VectorEmbedding
 from app.models.Document import Document
